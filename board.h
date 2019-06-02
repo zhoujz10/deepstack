@@ -50,7 +50,7 @@ public:
 
     friend void print(Board board) {
         std::cout << "{ Cards on board : ";
-        for(int card : board.cards)
+        for(auto card : board.cards)
             std::cout << card << ' ';
         std::cout << '}' << std::endl;
     }

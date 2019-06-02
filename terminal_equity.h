@@ -61,7 +61,7 @@ public:
 
     void _set_fold_matrix();
 
-    void set_board(Board &board, bool force);
+    void set_board(Board& src_board, bool force = false);
 
     void call_value(torch::Tensor &ranges, torch::Tensor &result);
 
@@ -118,27 +118,33 @@ void TerminalEquity::_set_call_matrix() {
 
     switch (board.street()) {
 
-        case 1: { equity_matrix.copy_(preflop_equity_matrix); }
+        case 1: {
+            equity_matrix.copy_(preflop_equity_matrix);
+            break;
+        }
         case 2: {
-            int card_0 = min(board.cards[0], board.cards[1], board.cards[2]);
-            int card_2 = max(board.cards[0], board.cards[1], board.cards[2]);
+            int card_0 = *min_element(board.cards, board.cards+2);
+            int card_2 = *max_element(board.cards, board.cards+2);
             int card_1 = board.cards[0] + board.cards[1] + board.cards[2] - card_0 - card_2;
             char equity_matrix_file[50];
             sprintf(equity_matrix_file, "%s%d_%d_%d.bin", flop_equity_matrix_dir, card_0, card_1, card_2);
-            read_pointer(equity_matrix_np, equity_matrix_file);
+            read_pointer((float*)equity_matrix_np, equity_matrix_file);
             equity_matrix.set_data(torch::from_blob(equity_matrix_np, equity_matrix.sizes(), equity_matrix.dtype()));
+            break;
         }
         case 3: {
             set_call_matrix_street_3_cpp(board.cards, equity_matrix_np, equity_matrix_next_street_np, sorted_hand_values_np, ranks_np);
             equity_matrix.set_data(
                     torch::from_blob(equity_matrix_next_street_np, {river_boards_count, hand_count, hand_count}, torch::kFloat32).sum(0).to(device) / 44);
+            break;
         }
         case 4: {
             set_call_matrix_4_cpp(board.cards, equity_matrix_np);
             equity_matrix.set_data(torch::from_blob(equity_matrix_np, equity_matrix.sizes(), equity_matrix.dtype()));
+            break;
         }
         default:
-            return;
+            break;
     }
 }
 
@@ -148,10 +154,10 @@ void TerminalEquity::_set_fold_matrix() {
 }
 
 
-void TerminalEquity::set_board(Board &board, bool force = false) {
-    if (this->board.is_same(board) && ! force)
+void TerminalEquity::set_board(Board &src_board, bool force) {
+    if (board.is_same(src_board) && ! force)
         return;
-    this->board.copy_(board);
+    board.copy_(src_board);
     this->_reset_tensors();
 
     if (board.street() == 4)

@@ -6,9 +6,9 @@ const bool gpu = false;
 
 const int streets_count = 4;
 
-const float ante = 100;
+const int ante = 100;
 
-const float stack = 20000;
+const int stack = 20000;
 
 const int cfr_iters[5] = {-1, 1000, 1000, 1000, 2000};
 
@@ -67,9 +67,13 @@ struct Constants {
     Players players;
     NodeTypes node_types;
     Actions actions;
+    Constants() {
+        players_count = 2;
+        streets_counts = 4;
+    }
 };
 
-struct Constants constants = {.players_count = 2, .streets_counts = 4, .players = Players(), NodeTypes(), .actions = Actions()};
+struct Constants constants;
 
 
 #endif //DEEPSTACK_CPP_GAME_SETTINGS_H

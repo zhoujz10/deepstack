@@ -22,15 +22,17 @@ public:
     static auto init_hand_collide() {
         auto p = new float[hand_count * hand_count];
         read_pointer(p, hand_collide_file);
-        return torch::from_blob(p, {hand_count, hand_count}, torch::kFloat32);
+        auto hc = torch::from_blob(p, {hand_count, hand_count}, torch::kFloat32);
+        free(p);
+        return hc;
     }
 
     static void get_possible_hand_indexes(Board& board, torch::Tensor& possible_hand_indexes) {
         possible_hand_indexes.fill_(1);
         if (board.street() == 0)
             return ;
-        for (int card : board.cards)
-            for (uint16_t hand : card_hand_collide[card])
+        for (auto _card : board.cards)
+            for (auto hand : card_hand_collide[_card])
                 possible_hand_indexes[hand] = 0;
     }
 
@@ -54,7 +56,7 @@ public:
         int street = board.street() + 1;
         int board_idx = 0;
         switch (street) {
-            case 1:
+            case 1: {
                 for (int card_0 = 0; card_0 < card_count; ++card_0) {
                     for (int card_1 = card_0 + 1; card_1 < card_count; ++card_1) {
                         for (int card_2 = card_1 + 1; card_2 < card_count; ++card_2) {
@@ -65,24 +67,30 @@ public:
                         }
                     }
                 }
-            case 2:
+                break;
+            }
+            case 2: {
                 for (int card_3 = 0; card_3 < card_count; ++card_3) {
                     if (board.contain(card_3))
                         continue;
                     p[board_idx].copy_(board);
                     p[board_idx].cards[3] = card_3;
-                    board_idx ++;
+                    board_idx++;
                 }
-            case 3:
+                break;
+            }
+            case 3: {
                 for (int card_4 = 0; card_4 < card_count; ++card_4) {
                     if (board.contain(card_4))
                         continue;
                     p[board_idx].copy_(board);
                     p[board_idx].cards[4] = card_4;
-                    board_idx ++;
+                    board_idx++;
                 }
+                break;
+            }
             default:
-                return;
+                break;
         }
     }
 

@@ -4,6 +4,8 @@
 #include "terminal_equity.h"
 #include "board.h"
 #include "card_tools.h"
+#include "bet_sizing.h"
+#include "poker_tree_builder.h"
 
 
 int main() {
@@ -16,18 +18,25 @@ int main() {
     tensor = tensor.slice(1, 0, 2);
     std::cout << tensor << std::endl;
 
+    pot_fractions_by_street[1][0] = {3,2,1};
+
+    std::cout << pot_fractions_by_street[1][0] << std::endl;
+
+    vector<float> x;
+    vector<float> y;
+
+    std::cout << &x << ' ' << &y << std::endl;
+
+    y = x;
+    std::cout << &x << ' ' << &y << std::endl;
+
 
 //    tensor[tensor > 0].fill_(1);
 //    std::cout << tensor << std::endl;
 
 //    tensor = tensor.toType(torch::kByte);
-    tensor.masked_fill_(tensor>2, 0);
-
-    char *p = "adsasdsa%djdksjksdjksd%dsdfsffs";
-
-    char *x = p % 3;
-
-    std::cout << tensor << std::endl;
+//    tensor.masked_fill_(tensor>2, 0);
+//    std::cout << tensor << std::endl;
 
 //
 //    tensor.fill_(1);
