@@ -30,11 +30,15 @@ struct Node {
 
     int river_idx = -1;
 
+    int river_count = 0;
+
     int *actions = nullptr;
 
     Node *river_tree_node = nullptr;
 
     Node *parent = nullptr;
+
+    Node *next_street_root = nullptr;
 
     vector<Node>* children;
 

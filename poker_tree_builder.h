@@ -15,17 +15,17 @@
 class PokerTreeBuilder {
 public:
 
-    bool is_next;
+    bool is_next = false;
 
-    int river_count;
+    int river_count = 0;
 
-    int *river_pots;
+    int *river_pots = nullptr;
 
     bool used_pot[20] = { false };
 
-    Node root;
+    Node& root;
 
-    explicit PokerTreeBuilder(bool _is_next = false, int river_count = 0, int *river_pots = nullptr);
+    explicit PokerTreeBuilder(bool is_next = false, int river_count = 0, int *river_pots = nullptr);
 
     static void _fill_additional_attributes(Node& node);
 
@@ -34,12 +34,14 @@ public:
     vector<Node> _get_children_nodes(Node &parent_node, int depth);
 
     void _build_tree_dfs(Node &current_node, int depth);
+
+    Node& build_tree(Node& build_tree_node);
 };
 
 PokerTreeBuilder::PokerTreeBuilder(bool is_next, int river_count, int *river_pots)
-    : is_next(is_next)
-    , river_count(river_count)
-    , river_pots(river_pots) {}
+        : is_next(is_next)
+        , river_count(river_count)
+        , river_pots(river_pots) {}
 
 void PokerTreeBuilder::_fill_additional_attributes(Node& node) {
     node.pot = *min_element(node.bets, node.bets+1);
@@ -232,7 +234,62 @@ void PokerTreeBuilder::_build_tree_dfs(Node &current_node, int depth) {
         current_node.depth = _depth + 1;
 }
 
+Node& PokerTreeBuilder::build_tree(Node& build_tree_node) {
+    root_node = new Node;
+//    copy necessary stuff from the root_node not to touch the input
+    root_node.terminal = false;
+    root_node.street = build_tree_node.street;
+    memcpy(root_node.bets, build_tree_node.bets, 2 * sizeof(int));
+    root_node.current_player = build_tree_node.current_player;
+    root_node.board.copy_(build_tree_node.board);
 
+    root = root_node;
+
+    if (root.street == 3) {
+        int cur_pot = *max_element(root.bets, root.bets+1);
+        int river_pots_fractions[17];
+        if (root.bets[0] == root.bets.[1] && root.current_player == constants.players.P1)
+            river_pots_fractions = {1, 2, 3, 3, 6, 9, 9, 18, 27, 27, 54, 81, 81, 162, 243, 243, 486};
+        else
+            river_pots_fractions = {1, 2, 3, 6, 9, 18, 27, 54, 81, 162, 243, 486, 0, 0, 0, 0, 0};
+        for (river_count=0; river_count<17; ++river_count) {
+            int river_pot = cur_pot * river_pots_fractions[i];
+            if (river_pots_fractions[i] > 0 && river_pot < stack)
+                root.river_pots[i] = river_pot;
+            else {
+                river_pot ++;
+                break;
+            }
+        }
+        root.river_count = river_count;
+    }
+
+    if (is_next) {
+        memcpy(root.river_pots, river_pots, river_count * sizeof(int));
+        for (int i=0; i<river_count; ++i) {
+            memset(root.all_river_bets[i], root.river_pots[i], 2 * sizeof(int));
+            root.all_river_valid[i] = true;
+        }
+    }
+    
+    _build_tree_dfs(root, 0);
+
+    if (root.street == 3 && root.river_count > 0) {
+        Node next_street_node;
+        next_street_node.board.copy_(root.river_tree_node.board);
+        next_street_node.street = 4;
+        next_street_node.current_player = constants.players.P1;
+        memcpy(next_street_node.bets, root.river_tree_node.bets, 2 * sizeof(int));
+
+        Node build_tree_params;
+        build_tree_params.root_node = next_street_node;
+        build_tree_params.limit_to_street = false;
+        auto tree_builder = new PokerTreeBuilder(true, river_count, root.river_pots);
+        Node next_street_root = tree_builder.build_tree(build_tree_params);
+        root.river_tree_node.next_street_root = &next_street_root;
+    }
+
+}
 
 
 
