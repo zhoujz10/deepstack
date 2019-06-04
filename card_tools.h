@@ -22,7 +22,7 @@ public:
     static auto init_hand_collide() {
         auto p = new float[hand_count * hand_count];
         read_pointer(p, hand_collide_file);
-        auto hc = torch::from_blob(p, {hand_count, hand_count}, torch::kFloat32);
+        auto hc = torch::from_blob(p, {hand_count, hand_count}, torch::kFloat32).to(device);
         free(p);
         return hc;
     }
@@ -48,7 +48,6 @@ public:
     }
 
     static int get_boards_count(int street) {
-        const int boards_count[5] = { 0, 0, card_count*(card_count-1)*(card_count-2)/6, card_count-3, card_count-4 };
         return boards_count[street];
     }
 

@@ -40,7 +40,7 @@ struct Node {
 
     Node *next_street_root = nullptr;
 
-    vector<Node>* children;
+    std::vector<Node>* children = nullptr;
 
     int river_pots[20] = { 0 };
 
@@ -50,6 +50,28 @@ struct Node {
 
     Board board;
 
+    Node() = default;
+
+    Node(const Node&) = default;
+
+    explicit Node(Board &bd, int *bt = nullptr) {
+        board.copy_(bd);
+        street = board.street();
+        if (bt != nullptr)
+            memcpy(bets, bt, 2 * sizeof(int));
+    }
+
+    explicit Node(int *cards, int *bt = nullptr) {
+        memcpy(board.cards, cards, Board::board_size * sizeof(int));
+        street = board.street();
+        if (bt != nullptr)
+            memcpy(bets, bt, 2 * sizeof(int));
+    }
+
+    void set_bets(const int b) {
+        bets[0] = b;
+        bets[1] = b;
+    }
 };
 
 

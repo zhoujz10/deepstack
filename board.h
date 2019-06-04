@@ -6,6 +6,8 @@
 #define DEEPSTACK_CPP_BOARD_H
 
 
+#include "constants.h"
+
 class Board {
 public:
 
@@ -60,9 +62,5 @@ public:
     }
 };
 
-class Hand {
-    Board board;
-
-};
 
 #endif //DEEPSTACK_CPP_BOARD_H

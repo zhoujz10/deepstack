@@ -1,8 +1,9 @@
-#include <torch/torch.h>
-#include <ATen/ATen.h>
-#include <iostream>
-#include "terminal_equity.h"
+//#include <torch/torch.h>
+//#include <ATen/ATen.h>
+//#include <iostream>
+//#include "terminal_equity.h"
 #include "board.h"
+#include "node.h"
 #include "card_tools.h"
 #include "bet_sizing.h"
 #include "poker_tree_builder.h"
@@ -14,21 +15,19 @@ int main() {
     torch::zeros({2, 2}, torch::kFloat32);
     float a[][3] = {{4,3,2},{1,5,6}};
     torch::Tensor tensor = torch::from_blob(a, {2, 3}, torch::kFloat32);
-
+    std::cout << tensor.sizes() << endl;
     tensor = tensor.slice(1, 0, 2);
     std::cout << tensor << std::endl;
 
-    pot_fractions_by_street[1][0] = {3,2,1};
+    int cards[5] = { 1, 2, 3, -1, -1 };
+    int bets[2] = { 100, 100 };
+    Node build_tree_params( cards, bets );
+    PokerTreeBuilder ptb;
+    auto root_node = ptb.build_tree(build_tree_params);
+    for (auto& child : *root_node->children)
+        std::cout << child.bets[0] << ' ' << child.bets[1] << std::endl;
+    std::cout << (*(*root_node->children)[1].children)[1].children->size() << std::endl;
 
-    std::cout << pot_fractions_by_street[1][0] << std::endl;
-
-    vector<float> x;
-    vector<float> y;
-
-    std::cout << &x << ' ' << &y << std::endl;
-
-    y = x;
-    std::cout << &x << ' ' << &y << std::endl;
 
 
 //    tensor[tensor > 0].fill_(1);

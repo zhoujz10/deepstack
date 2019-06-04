@@ -14,6 +14,6 @@ find_package(Torch REQUIRED)
 include_directories(/usr/local/include/ATen /usr/local/include/c10 /usr/local/include/torch)
 link_directories(/usr/local/lib)
 
-add_executable(deepstack_cpp main.cpp game_settings.h terminal_equity.h board.h board.h card_tools.h constants.h io.h runtime.h poker_tree_builder.h bet_sizing.h node.h)
+add_executable(deepstack_cpp main.cpp game_settings.h terminal_equity.h board.h board.h card_tools.h constants.h io.h runtime.h poker_tree_builder.h bet_sizing.h node.h lookahead.h lookahead.cpp poker_tree_builder.cpp bet_sizing.cpp)
 target_link_libraries(deepstack_cpp "${TORCH_LIBRARIES}")
 

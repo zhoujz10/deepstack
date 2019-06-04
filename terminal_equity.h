@@ -90,9 +90,9 @@ void TerminalEquity::_reset_tensors() {
     equity_matrix.zero_();
 }
 
-void TerminalEquity::_set_river_abstract(Board &board) {
+void TerminalEquity::_set_river_abstract(Board &b) {
 
-    river_hand_abstract_count = set_river_abstract_combine_cpp(board.cards, river_hand_abstract_np, equity_matrix_next_street_np_, fold_matrix_next_street_np);
+    river_hand_abstract_count = set_river_abstract_combine_cpp(b.cards, river_hand_abstract_np, equity_matrix_next_street_np_, fold_matrix_next_street_np);
 
     river_hand_abstract = torch::from_blob(river_hand_abstract_np, {river_boards_count, hand_count, max_abs_count}, torch::kFloat32).slice(2, 0, river_hand_abstract_count).to(device);
 
@@ -100,7 +100,7 @@ void TerminalEquity::_set_river_abstract(Board &board) {
 
     fold_matrix_next_street = torch::from_blob(fold_matrix_next_street_np, {max_abs_count, max_abs_count}, torch::kFloat32).slice(0, 0, river_hand_abstract_count).slice(1, 0, river_hand_abstract_count).to(device);
 
-    mask_next_street = river_hand_abstract.sum(2).view({48, 1, -1}).expand({-1, 2, -1});
+    mask_next_street = river_hand_abstract.sum(2).view({boards_count[4], 1, -1}).expand({-1, 2, -1});
     mask_next_street.masked_fill_(mask_next_street > 0, 1);
     mask_next_street = mask_next_street.toType(torch::kByte);;
     mask_next_street *= -1;

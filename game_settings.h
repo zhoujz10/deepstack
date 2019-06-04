@@ -10,9 +10,9 @@ const int ante = 100;
 
 const int stack = 20000;
 
-const int cfr_iters[5] = {-1, 1000, 1000, 1000, 2000};
+const int cfr_iters[5] = { -1, 1000, 1000, 1000, 2000 };
 
-const int cfr_skip_iters[5] = {-1, 980, 500, 500, 1000};
+const int cfr_skip_iters[5] = { -1, 980, 500, 500, 1000 };
 
 const int suit_count = 4;
 
@@ -22,7 +22,7 @@ const int card_count = suit_count * rank_count;
 
 const int hand_count = (int)(0.5 * card_count * (card_count - 1));
 
-const int board_card_count[5] = {-1, 0, 3, 4, 5};
+const int board_card_count[5] = { -1, 0, 3, 4, 5 };
 
 const int player_count = 2;
 
@@ -73,7 +73,7 @@ struct Constants {
     }
 };
 
-struct Constants constants;
+const struct Constants constants;
 
 
 #endif //DEEPSTACK_CPP_GAME_SETTINGS_H
