@@ -9,8 +9,8 @@
 #include <vector>
 #include <array>
 #include <tuple>
-#include "node.h"
-#include "constants.h"
+#include "../Tree/node.h"
+#include "../Settings/constants.h"
 
 
 void get_possible_bets(Node& node, int street, int depth, bool is_next,

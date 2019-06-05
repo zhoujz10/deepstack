@@ -6,7 +6,7 @@
 #define DEEPSTACK_CPP_BOARD_H
 
 
-#include "constants.h"
+#include "../Settings/constants.h"
 
 class Board {
 public:

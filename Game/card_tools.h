@@ -6,11 +6,11 @@
 #define DEEPSTACK_CPP_CARD_TOOLS_H
 
 #include <torch/torch.h>
-#include "constants.h"
-#include "game_settings.h"
+#include "../Settings/constants.h"
+#include "../Settings/game_settings.h"
 #include "board.h"
-#include "io.h"
-#include "runtime.h"
+#include "../io.h"
+#include "../runtime.h"
 
 
 class CardTools {
@@ -22,9 +22,7 @@ public:
     static auto init_hand_collide() {
         auto p = new float[hand_count * hand_count];
         read_pointer(p, hand_collide_file);
-        auto hc = torch::from_blob(p, {hand_count, hand_count}, torch::kFloat32).to(device);
-        free(p);
-        return hc;
+        return torch::from_blob(p, {hand_count, hand_count}, torch::kFloat32).to(device);
     }
 
     static void get_possible_hand_indexes(Board& board, torch::Tensor& possible_hand_indexes) {
@@ -103,9 +101,6 @@ public:
         out /= out.sum();
     }
 };
-
-
-torch::Tensor CardTools::hand_collide = CardTools::init_hand_collide();
 
 
 #endif //DEEPSTACK_CPP_CARD_TOOLS_H

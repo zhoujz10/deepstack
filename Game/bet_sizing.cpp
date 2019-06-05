@@ -3,8 +3,8 @@
 //
 
 
-#include "constants.h"
-#include "game_settings.h"
+#include "../Settings/constants.h"
+#include "../Settings/game_settings.h"
 #include "bet_sizing.h"
 
 

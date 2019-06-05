@@ -8,21 +8,23 @@
 
 #include <vector>
 #include <map>
+#include <tuple>
 #include <torch/torch.h>
-#include "constants.h"
-#include "game_settings.h"
-#include "poker_tree_builder.h"
+#include "../Settings/constants.h"
+#include "../Settings/game_settings.h"
+#include "../TerminalEquity/terminal_equity.h"
+#include "../Tree/poker_tree_builder.h"
 
 
 class Lookahead {
 public:
 
     int ccall_action_index = 0;
-    int fold_action_index;
-    int num_pot_sizes;
-    int depth;
+    int fold_action_index = 0;
+    int num_pot_sizes = 0;
+    int depth = 0;
     bool is_next;
-    int river_count;
+    int river_count = 0;
 
     Node *tree;
 
@@ -62,10 +64,31 @@ public:
     torch::Tensor cfvs_data_hand_memory;
     torch::Tensor ranges_data_hand_memory;
 
-    std::map<int, int> idx_range_by_depth;
+    std::map<int, std::pair<int, int>> term_call_indices;
+    int num_term_call_nodes = 0;
+    std::map<int, std::pair<int, int>> term_fold_indices;
+    int num_term_fold_nodes = 0;
 
-    Lookahead();
-    void build_lookahead(PokerTreeBuilder& tree);
+    torch::Tensor ranges_data_call;
+    torch::Tensor ranges_data_fold;
+    torch::Tensor cfvs_data_call;
+    torch::Tensor cfvs_data_fold;
+
+    std::map<int, int> idx_range_by_depth;
+    std::map<int, int> parent_action_id;
+
+    std::vector<std::tuple<int, int, int, int, int, int>> next_street_lookahead;
+    Lookahead* river_lookahead = nullptr;
+    std::vector<int> max_depth;
+
+    TerminalEquity *terminal_equity = nullptr;
+
+    bool first_call_terminal;
+    bool first_call_transition;
+    bool first_call_check;
+
+    Lookahead(bool is_next=false);
+    void build_lookahead(Node& tree);
     void resolve_first_node(torch::Tensor player_range, torch::Tensor opponent_range);
     void resolve(torch::Tensor player_range, torch::Tensor opponent_cfvs, torch::Tensor opponent_range_warm_start);
     torch::Tensor& get_chance_action_cfv(const int action_index, const int action, Board& board);
@@ -106,12 +129,12 @@ public:
     void construct_data_structures();
     void set_datastructures_from_tree_dfs(Node& node, const int layer, const int action_id, const int parent_id,
                                           const int gp_id, const int cur_action_id, const int parent_action_id);
-    void build_from_tree(PokerTreeBuilder& tree, const int river_hand_abstract_count = hand_count);
+    void build_from_tree(Node& tree, const int _river_hand_abstract_count = hand_count);
 
 private:
     void _construct_transition_boxes();
     void _compute_structure();
-    void _compute_tree_structures(std::vector<Node&>& layer, const int current_depth);
+    void _compute_tree_structures(std::vector<Node*>& current_layer, const int current_depth);
 };
 
 

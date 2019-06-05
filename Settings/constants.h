@@ -11,7 +11,8 @@
 #include <string>
 #include <torch/torch.h>
 
-static const c10::Device device = c10::Device(c10::DeviceType::CUDA);
+//static const c10::Device device = c10::Device(c10::DeviceType::CUDA);
+static const c10::Device device = c10::Device(c10::DeviceType::CPU);
 
 static const char *hand_collide_file = "data/hand_collide.npy";
 

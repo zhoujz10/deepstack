@@ -7,9 +7,9 @@
 
 
 #include <vector>
-#include "board.h"
+#include "../Game/board.h"
 #include "node.h"
-#include "bet_sizing.h"
+#include "../Game/bet_sizing.h"
 
 
 class PokerTreeBuilder {

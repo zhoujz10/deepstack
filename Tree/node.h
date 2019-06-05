@@ -7,7 +7,7 @@
 
 
 #include <vector>
-#include "board.h"
+#include "../Game/board.h"
 
 struct Node {
     int node_type = 0;
