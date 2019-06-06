@@ -101,19 +101,19 @@ void TerminalEquity::set_board(Board &src_board, bool force) {
 }
 
 
-void TerminalEquity::call_value(torch::Tensor &ranges, torch::Tensor &result) {
+void TerminalEquity::call_value(const torch::Tensor &ranges, torch::Tensor &result) {
     torch::matmul_out(result, ranges, equity_matrix);
 }
 
-void TerminalEquity::call_value_next_street(torch::Tensor &ranges, torch::Tensor &result) {
+void TerminalEquity::call_value_next_street(const torch::Tensor &ranges, torch::Tensor &result) {
     torch::matmul_out(result, ranges, equity_matrix_next_street);
 }
 
-void TerminalEquity::fold_value(torch::Tensor &ranges, torch::Tensor &result) {
+void TerminalEquity::fold_value(const torch::Tensor &ranges, torch::Tensor &result) {
     torch::matmul_out(result, ranges, fold_matrix);
 }
 
-void TerminalEquity::fold_value_next_street(torch::Tensor &ranges, torch::Tensor &result) {
+void TerminalEquity::fold_value_next_street(const torch::Tensor &ranges, torch::Tensor &result) {
     torch::matmul_out(result, ranges, fold_matrix_next_street);
 }
 

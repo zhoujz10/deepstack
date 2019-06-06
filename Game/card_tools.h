@@ -23,7 +23,7 @@ public:
         auto p = new float[hand_count * hand_count];
         memset(p, 0, hand_count*hand_count*sizeof(float));
         read_pointer(p, hand_collide_file);
-        hand_collide .copy_(torch::from_blob(p, {hand_count, hand_count}, torch::kFloat32));
+        hand_collide.copy_(torch::from_blob(p, {hand_count, hand_count}, torch::kFloat32));
         free(p);
     }
 

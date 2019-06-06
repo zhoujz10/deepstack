@@ -97,7 +97,7 @@ public:
     void build_lookahead(Node& _tree);
     void resolve_first_node(torch::Tensor player_range, torch::Tensor opponent_range);
     void resolve(torch::Tensor player_range, torch::Tensor opponent_cfvs, torch::Tensor opponent_range_warm_start);
-    torch::Tensor& get_chance_action_cfv(const int action_index, const int action, Board& board);
+    torch::Tensor& get_chance_action_cfv(int action_index, int action, Board& board);
     auto get_results();
 
 private:
@@ -106,21 +106,21 @@ private:
     void _compute_current_strategies_next_street();
     void _compute_ranges();
     void _compute_ranges_next_street();
-    void _compute_update_average_strategies(const int _iter);
+    void _compute_update_average_strategies(int _iter);
     void _compute_terminal_equities_terminal_equity();
     void _compute_terminal_equities_terminal_equity_next_street();
-    void _compute_terminal_equities_next_street_box(const int _iter);
-    void _compute_terminal_equities_next_street_resolve(const int _iter);
-    void _compute_terminal_equities(const int _iter);
+    void _compute_terminal_equities_next_street_box(int _iter);
+    void _compute_terminal_equities_next_street_resolve(int _iter);
+    void _compute_terminal_equities(int _iter);
     void _compute_terminal_equities_next_street();
     void _compute_cfvs();
     void _compute_cfvs_next_street();
-    void _compute_cumulate_average_cfvs(const int _iter);
+    void _compute_cumulate_average_cfvs(int _iter);
     void _compute_normalize_average_strategies();
     void _compute_normalize_average_cfvs();
     void _compute_regrets();
     void _compute_regrets_next_street();
-    void _set_opponent_starting_range(const int _iter);
+    void _set_opponent_starting_range(int _iter);
 };
 
 class LookaheadBuilder {
@@ -133,14 +133,14 @@ public:
     explicit LookaheadBuilder(Lookahead *ptr);
 
     void construct_data_structures();
-    void set_datastructures_from_tree_dfs(Node& node, const int layer, const int action_id, const int parent_id,
-                                          const int gp_id, const int cur_action_id, const int parent_action_id);
-    void build_from_tree(Node& tree, const int _river_hand_abstract_count = hand_count);
+    void set_datastructures_from_tree_dfs(Node& node, int layer, const int action_id, const int parent_id,
+                                          int gp_id, int cur_action_id, int parent_action_id);
+    void build_from_tree(Node& tree, int _river_hand_abstract_count = hand_count);
 
 private:
     void _construct_transition_boxes();
     void _compute_structure();
-    void _compute_tree_structures(std::vector<Node*>& current_layer, const int current_depth);
+    void _compute_tree_structures(std::vector<Node*>& current_layer, int current_depth);
 };
 
 

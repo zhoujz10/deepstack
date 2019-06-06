@@ -23,7 +23,6 @@
 #include <iostream>
 #include <fstream>
 #include <string>
-#include <omp.h>
 #include <time.h>
 #include "hash/SevenEval.h"
 #include "io.h"

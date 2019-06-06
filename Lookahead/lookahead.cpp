@@ -34,18 +34,18 @@ void Lookahead::resolve(torch::Tensor player_range, torch::Tensor opponent_cfvs,
 }
 
 void Lookahead::_compute() {
-//    for (int _iter=0; _iter<cfr_iters[tree->street]; ++_iter) {
-//        _set_opponent_starting_range(_iter);
-//        _compute_current_strategies();
-//        _compute_ranges();
-//        _compute_update_average_strategies(_iter);
-//        _compute_terminal_equities(_iter);
-//        _compute_cfvs();
-//        _compute_regrets();
-//        _compute_cumulate_average_cfvs(_iter);
-//    }
-//    _compute_normalize_average_strategies();
-//    _compute_normalize_average_cfvs();
+    for (int _iter=0; _iter<cfr_iters[tree->street]; ++_iter) {
+        _set_opponent_starting_range(_iter);
+        _compute_current_strategies();
+        _compute_ranges();
+        _compute_update_average_strategies(_iter);
+        _compute_terminal_equities(_iter);
+        _compute_cfvs();
+        _compute_regrets();
+        _compute_cumulate_average_cfvs(_iter);
+    }
+    _compute_normalize_average_strategies();
+    _compute_normalize_average_cfvs();
 }
 
 void Lookahead::_compute_current_strategies() {
@@ -143,12 +143,120 @@ void Lookahead::_compute_ranges_next_street() {
     }
 }
 
+void Lookahead::_compute_update_average_strategies(const int _iter) {
+    if (_iter >= cfr_skip_iters[tree->street])
+        average_strategies_data[1] += current_strategy_data[1];
+}
+
+void Lookahead::_compute_terminal_equities_terminal_equity() {
+    for (int d=1; d<depth+1; ++d) {
+        if (d>1 or first_call_terminal) {
+            if (tree->street != 4)
+                ranges_data_call.slice(0, term_call_indices[d].first*2, term_call_indices[d].second*2, 1).copy_(
+                        ranges_data[d][1][-1].view({-1, hand_count}));
+            else
+                ranges_data_call.slice(0, term_call_indices[d].first*2, term_call_indices[d].second*2, 1).copy_(
+                        ranges_data[d][1].view({num_term_call_nodes*2, hand_count}));
+        }
+        ranges_data_fold.slice(0, term_fold_indices[d].first*2, term_fold_indices[d].second*2, 1).copy_(
+                ranges_data[d][0].view({num_term_fold_nodes*2, hand_count}));
+    }
+
+    terminal_equity.call_value(ranges_data_call, cfvs_data_call);
+    terminal_equity.fold_value(ranges_data_fold, cfvs_data_fold);
 
 
+    for (int d=1; d<depth+1; ++d) {
+        if (d>1 or first_call_terminal) {
+            if (tree->street != 4)
+                cfvs_data[d].slice(0, 1, 2, 1).slice(1, cfvs_data[d].sizes()[1], cfvs_data[d].sizes()[1]+1, 1).copy_(
+                        cfvs_data_call.slice(0, term_call_indices[d].first*2, term_call_indices[d].second*2, 1));
+            else
+                cfvs_data[d][1].copy_(cfvs_data_call.slice(
+                        0, term_call_indices[d].first*2, term_call_indices[d].second*2, 1).view(cfvs_data[d][1].sizes()));
+        }
+        cfvs_data[d][0].copy_(cfvs_data_fold.slice(
+                0, term_fold_indices[d].first*2, term_fold_indices[d].second*2, 1).view(cfvs_data[d][0].sizes()));
 
+        int fold_mutliplier = acting_player[d] * 2 - 1;
+        cfvs_data[d].slice(0, 0, 1, 1).slice(3, 0, 1, 1) *= fold_mutliplier;
+        cfvs_data[d].slice(0, 0, 1, 1).slice(3, 1, -1, 1) *= -fold_mutliplier;
+    }
+}
 
+void Lookahead::_compute_terminal_equities_terminal_equity_next_street() {
+    for (int d=1; d<depth+1; ++d) {
+        if (d>1 or first_call_terminal) {
+            torch::Tensor _ranges_data = ranges_data[d].slice(0, 1, 2, 1).view({-1, terminal_equity.river_hand_abstract_count});
+            torch::Tensor _cfvs_data = cfvs_data[d].slice(0, 1, 2, 1).view({-1, terminal_equity.river_hand_abstract_count});
+            terminal_equity.call_value_next_street(_ranges_data, _cfvs_data);
 
+            int fold_mutliplier = acting_player[d]*2 - 1;
+            _ranges_data = ranges_data[d].slice(0, 0, 1, 1).view({-1, terminal_equity.river_hand_abstract_count});
+            _cfvs_data = cfvs_data[d].slice(0, 0, 1, 1).view({-1, terminal_equity.river_hand_abstract_count});
+            terminal_equity.fold_value_next_street(_ranges_data, _cfvs_data);
+            cfvs_data[d].slice(0, 0, 1, 1).slice(5, 0, 1, 1) *= fold_mutliplier;
+            cfvs_data[d].slice(0, 0, 1, 1).slice(0, 1, -1, 1) *= -fold_mutliplier;
+        }
+    }
+}
 
+void Lookahead::_compute_terminal_equities_next_street_box(const int _iter) {
+    assert (tree->street <= 3);
+//    TODO: finish this function
+}
+
+void Lookahead::_compute_terminal_equities_next_street_resolve(const int _iter) {
+    river_lookahead->_compute_terminal_equities_next_street();
+    river_lookahead->_compute_cfvs_next_street();
+
+    for (auto& t : next_street_lookahead) {
+        auto layer = std::get<0>(t);
+        auto action_id = std::get<1>(t);
+        auto parent_id = std::get<2>(t);
+        auto gp_id = std::get<3>(t);
+        auto i = std::get<4>(t);
+        auto pot = std::get<5>(t);
+
+        river_lookahead->cfvs_data_hand.slice(0, i, i+1, 1).copy_(
+                torch::bmm(river_lookahead->cfvs_data[0].slice(0, 0, 1, 1).slice(1, 0, 1, 1).slice(2, 0, 1, 1).slice(3, i, i+1, 1),
+                        terminal_equity.river_hand_abstract.transpose(1,2)));
+        if (tree->current_player == 0)
+            cfvs_data[layer].slice(0, action_id, action_id+1, 1).slice(1, parent_id, parent_id+1, 1).slice(2, gp_id, gp_id+1, 1).copy_(
+                    river_lookahead->cfvs_data_hand.slice(0, i, i+1, 1).sum(0) / pot / 44);
+        else {
+            torch::Tensor cfvs_data_hand_sum = river_lookahead->cfvs_data_hand.slice(0, i, i+1, 1).sum(0);
+            cfvs_data[layer].slice(0, action_id, action_id+1, 1).slice(1, parent_id, parent_id+1, 1).slice(
+                    2, gp_id, gp_id+1, 1).slice(3, 0, 1, 1).copy_(cfvs_data_hand_sum.slice(0, 1, -1, 1) / pot / 44);
+            cfvs_data[layer].slice(0, action_id, action_id+1, 1).slice(1, parent_id, parent_id+1, 1).slice(
+                    2, gp_id, gp_id+1, 1).slice(3, 1, -1, 1).copy_(cfvs_data_hand_sum.slice(0, 0, 1, 1) / pot / 44);
+        }
+        if (_iter >= cfr_skip_iters[3]) {
+            river_lookahead->ranges_data_hand_memory += river_lookahead->ranges_data_hand;
+            river_lookahead->cfvs_data_hand_memory += river_lookahead->cfvs_data_hand;
+        }
+    }
+}
+
+void Lookahead::_compute_terminal_equities(const int _iter) {
+    if (tree->street == 3 && *std::max_element(tree->bets, tree->bets+1) < stack)
+        _compute_terminal_equities_next_street_resolve(_iter);
+    else
+        _compute_terminal_equities_next_street_box(_iter);
+
+    _compute_terminal_equities_terminal_equity()
+
+    for (int d=1; d<depth+1; ++d)
+        cfvs_data[d] *= pot_size[d];
+}
+
+void Lookahead::_compute_terminal_equities_next_street() {
+
+    _compute_terminal_equities_terminal_equity_next_street();
+
+    for (int d=1; d<depth+1; ++d)
+        cfvs_data[d] *= pot_size[d];
+}
 
 
 

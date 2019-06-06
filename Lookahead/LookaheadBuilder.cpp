@@ -202,11 +202,11 @@ void LookaheadBuilder::construct_data_structures() {
             lookahead->term_fold_indices[d] = std::pair<int, int>(before, lookahead->num_term_fold_nodes);
         }
 
-        lookahead->ranges_data_call = torch::zeros({lookahead->num_term_call_nodes, 2, river_hand_abstract_count}, torch::kFloat32).to(device);
-        lookahead->ranges_data_fold = torch::zeros({lookahead->num_term_fold_nodes, 2, river_hand_abstract_count}, torch::kFloat32).to(device);
+        lookahead->ranges_data_call = torch::zeros({lookahead->num_term_call_nodes*2, river_hand_abstract_count}, torch::kFloat32).to(device);
+        lookahead->ranges_data_fold = torch::zeros({lookahead->num_term_fold_nodes*2, river_hand_abstract_count}, torch::kFloat32).to(device);
 
-        lookahead->cfvs_data_call = torch::zeros({lookahead->num_term_call_nodes, 2, river_hand_abstract_count}, torch::kFloat32).to(device);
-        lookahead->cfvs_data_fold = torch::zeros({lookahead->num_term_fold_nodes, 2, river_hand_abstract_count}, torch::kFloat32).to(device);
+        lookahead->cfvs_data_call = torch::zeros({lookahead->num_term_call_nodes*2, river_hand_abstract_count}, torch::kFloat32).to(device);
+        lookahead->cfvs_data_fold = torch::zeros({lookahead->num_term_fold_nodes*2, river_hand_abstract_count}, torch::kFloat32).to(device);
     }
     else {
         for (int d=1; d<lookahead->depth+1; ++d)
@@ -228,11 +228,11 @@ void LookaheadBuilder::construct_data_structures() {
             lookahead->term_fold_indices[d] = std::pair<int, int>(before, lookahead->num_term_fold_nodes);
         }
 
-        lookahead->ranges_data_call = torch::zeros({lookahead->num_term_call_nodes, 2, hand_count}, torch::kFloat32).to(device);
-        lookahead->ranges_data_fold = torch::zeros({lookahead->num_term_fold_nodes, 2, hand_count}, torch::kFloat32).to(device);
+        lookahead->ranges_data_call = torch::zeros({lookahead->num_term_call_nodes*2, hand_count}, torch::kFloat32).to(device);
+        lookahead->ranges_data_fold = torch::zeros({lookahead->num_term_fold_nodes*2, hand_count}, torch::kFloat32).to(device);
 
-        lookahead->cfvs_data_call = torch::zeros({lookahead->num_term_call_nodes, 2, hand_count}, torch::kFloat32).to(device);
-        lookahead->cfvs_data_fold = torch::zeros({lookahead->num_term_fold_nodes, 2, hand_count}, torch::kFloat32).to(device);
+        lookahead->cfvs_data_call = torch::zeros({lookahead->num_term_call_nodes*2, hand_count}, torch::kFloat32).to(device);
+        lookahead->cfvs_data_fold = torch::zeros({lookahead->num_term_fold_nodes*2, hand_count}, torch::kFloat32).to(device);
     }
 }
 

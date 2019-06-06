@@ -72,13 +72,13 @@ public:
 
     void set_board(Board& src_board, bool force = false);
 
-    void call_value(torch::Tensor &ranges, torch::Tensor &result);
+    void call_value(const torch::Tensor &ranges, torch::Tensor &result);
 
-    void call_value_next_street(torch::Tensor &ranges, torch::Tensor &result);
+    void call_value_next_street(const torch::Tensor &ranges, torch::Tensor &result);
 
-    void fold_value(torch::Tensor &ranges, torch::Tensor &result);
+    void fold_value(const torch::Tensor &ranges, torch::Tensor &result);
 
-    void fold_value_next_street(torch::Tensor &ranges, torch::Tensor &result);
+    void fold_value_next_street(const torch::Tensor &ranges, torch::Tensor &result);
 };
 
 TerminalEquity& get_terminal_equity();
