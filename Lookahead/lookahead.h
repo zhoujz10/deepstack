@@ -30,7 +30,8 @@ public:
 
     Node *tree = nullptr;
 
-    torch::Tensor acting_player;
+    torch::Tensor acting_player_tensor;
+    std::vector<int> acting_player;
 
     std::map<int, int> bets_count;
     std::map<int, int> nonallinbets_count;

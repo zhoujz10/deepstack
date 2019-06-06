@@ -82,10 +82,10 @@ void Lookahead::_compute_ranges() {
         int gp_layer_nonallin_bets_count = nonallinbets_count[d-2];
 
         inner_nodes[d].copy_(current_level_ranges.slice(0, prev_layer_terminal_actions_count, -1, 1).slice(1, 0, gp_layer_nonallin_bets_count, 1));
-        const torch::Tensor& super_view = inner_nodes[d].transpose(1,2).view({1, prev_layer_bets_count, -1, constants.players_count, hand_count});
+        torch::Tensor super_view = inner_nodes[d].transpose(1,2).view({1, prev_layer_bets_count, -1, constants.players_count, hand_count});
         next_level_ranges.copy_(super_view.expand_as(next_level_ranges));
 
-        next_level_ranges.slice(3, acting_player.data<int>()[d], acting_player.data<int>()[d]+1, 1) *= current_strategy_data[d+1];
+        next_level_ranges.slice(3, acting_player[d], acting_player[d]+1, 1) *= current_strategy_data[d+1];
     }
 
     if (tree->street == 3 && *std::max_element(tree->bets, tree->bets+1) < stack) {
@@ -96,7 +96,7 @@ void Lookahead::_compute_ranges() {
             auto gp_id = std::get<3>(t);
             auto i = std::get<4>(t);
 
-            const torch::Tensor& rd_slice = ranges_data[layer].slice(0, action_id, action_id+1, 1)
+            torch::Tensor rd_slice = ranges_data[layer].slice(0, action_id, action_id+1, 1)
                     .slice(1, parent_id, parent_id+1, 1).slice(2, gp_id, gp_id+1, 1);
             river_lookahead->ranges_convert[i].copy_(torch::bmm(rd_slice.view({1,2,hand_count}).expand({48,-1,-1}), terminal_equity.river_hand_abstract));
             river_lookahead->ranges_data_hand[i].copy_(rd_slice.expand_as(river_lookahead->ranges_data_hand[i]));
@@ -126,10 +126,20 @@ void Lookahead::_compute_ranges_next_street() {
         int gp_layer_nonallin_bets_count = nonallinbets_count[d-2];
 
         inner_nodes[d].copy_(current_level_ranges.slice(0, prev_layer_terminal_actions_count, -1, 1).slice(1, 0, gp_layer_nonallin_bets_count, 1));
-//        if (idx_range_by_depth.find(d) != idx_range_by_depth.end())
-//            super_view = self.inner_nodes[d].transpose(1,2).reshape((1, prev_layer_bets_count, -1, self.idx_range_by_depth[d], 48, constants['players_count'], self.terminal_equity.river_hand_abstract_count))
-//        else
-//            super_view = self.inner_nodes[d].transpose(1,2).reshape((1, prev_layer_bets_count, -1, self.river_count, 48, constants['players_count'], self.terminal_equity.river_hand_abstract_count))
+        torch::Tensor super_view;
+        if (idx_range_by_depth.find(d) != idx_range_by_depth.end())
+            super_view = inner_nodes[d].transpose(1,2).view({1, prev_layer_bets_count, -1, idx_range_by_depth[d],
+                                                             boards_count[4], constants.players_count, terminal_equity.river_hand_abstract_count});
+        else
+            super_view = inner_nodes[d].transpose(1,2).view({1, prev_layer_bets_count, -1, river_count,
+                                                             boards_count[4], constants.players_count, terminal_equity.river_hand_abstract_count});
+
+        if (idx_range_by_depth.find(d+1) != idx_range_by_depth.end())
+            next_level_ranges.copy_(super_view.slice(3, 0, idx_range_by_depth[d+1], 1).expand_as(next_level_ranges));
+        else
+            next_level_ranges.copy_(super_view.expand_as(next_level_ranges));
+
+        next_level_ranges.slice(5, acting_player[d], acting_player[d]+1, 1) *= current_strategy_data[d+1];
     }
 }
 

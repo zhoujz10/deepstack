@@ -23,10 +23,13 @@ void LookaheadBuilder::_construct_transition_boxes() {
 void LookaheadBuilder::_compute_structure() {
     assert (1 <= lookahead->tree->street && lookahead->tree->street <= 4);
 
-    lookahead->acting_player = torch::ones(lookahead->depth+1, torch::kInt32).to(device);
-    lookahead->acting_player[0] = 0;
-    for (int d=1; d<lookahead->depth+1; ++d)
-        lookahead->acting_player[d] = 1 - lookahead->acting_player[d-1];
+    lookahead->acting_player_tensor = torch::ones(lookahead->depth+1, torch::kInt32).to(device);
+    lookahead->acting_player_tensor[0] = 0;
+    lookahead->acting_player.push_back(0);
+    for (int d=1; d<lookahead->depth+1; ++d) {
+        lookahead->acting_player_tensor[d] = 1 - lookahead->acting_player_tensor[d - 1];
+        lookahead->acting_player.push_back(1 - lookahead->acting_player[-1]);
+    }
     lookahead->bets_count[-2] = 1;
     lookahead->bets_count[-1] = 1;
     lookahead->nonallinbets_count[-2] = 1;

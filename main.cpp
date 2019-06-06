@@ -31,13 +31,9 @@ int main() {
 
     torch::Tensor t2;
 
-    t2 = tensor.slice(1, 0, 2, 1);
-    t2.contiguous();
-    t2.view({4, 1});
+    t2 = tensor.view({1, 6});
 
-    std::cout << t2 << endl;
-
-    t2[0] = 10;
+    t2[0] = 100;
 
     std::cout << t2 << endl;
     std::cout << tensor << endl;
