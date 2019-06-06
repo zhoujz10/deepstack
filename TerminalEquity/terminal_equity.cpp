@@ -5,12 +5,9 @@
 #include "terminal_equity.h"
 
 
-torch::Tensor CardTools::hand_collide;
-
 TerminalEquity::TerminalEquity() {
     Board b;
     this->set_board(b, true);
-    CardTools::hand_collide = CardTools::init_hand_collide();
 }
 
 void TerminalEquity::_reset_tensors() {
@@ -43,7 +40,7 @@ void TerminalEquity::_set_river_abstract(Board &b) {
 }
 
 void TerminalEquity::_handle_blocking_cards() {
-    CardTools::get_possible_hand_indexes(board, possible_hand_indexes);
+    card_tools.get_possible_hand_indexes(board, possible_hand_indexes);
     torch::Tensor possible_hand_matrix = possible_hand_indexes.expand_as(fold_matrix);
     fold_matrix *= possible_hand_matrix;
     fold_matrix *= possible_hand_matrix.t();
@@ -64,18 +61,18 @@ void TerminalEquity::_set_call_matrix() {
             char equity_matrix_file[50];
             sprintf(equity_matrix_file, "%s%d_%d_%d.bin", flop_equity_matrix_dir, card_0, card_1, card_2);
             read_pointer((float*)equity_matrix_np, equity_matrix_file);
-            equity_matrix.set_data(torch::from_blob(equity_matrix_np, equity_matrix.sizes(), equity_matrix.dtype()));
+            equity_matrix.copy_(torch::from_blob(equity_matrix_np, equity_matrix.sizes(), equity_matrix.dtype()));
             break;
         }
         case 3: {
             set_call_matrix_street_3_cpp(board.cards, equity_matrix_np, equity_matrix_next_street_np, sorted_hand_values_np, ranks_np);
-            equity_matrix.set_data(
+            equity_matrix.copy_(
                     torch::from_blob(equity_matrix_next_street_np, {river_boards_count, hand_count, hand_count}, torch::kFloat32).sum(0).to(device) / 44);
             break;
         }
         case 4: {
             set_call_matrix_4_cpp(board.cards, equity_matrix_np);
-            equity_matrix.set_data(torch::from_blob(equity_matrix_np, equity_matrix.sizes(), equity_matrix.dtype()));
+            equity_matrix.copy_(torch::from_blob(equity_matrix_np, equity_matrix.sizes(), equity_matrix.dtype()));
             break;
         }
         default:
@@ -84,7 +81,7 @@ void TerminalEquity::_set_call_matrix() {
 }
 
 void TerminalEquity::_set_fold_matrix() {
-    fold_matrix.copy_(CardTools::hand_collide);
+    fold_matrix.copy_(card_tools.hand_collide);
     _handle_blocking_cards();
 }
 
@@ -118,4 +115,10 @@ void TerminalEquity::fold_value(torch::Tensor &ranges, torch::Tensor &result) {
 
 void TerminalEquity::fold_value_next_street(torch::Tensor &ranges, torch::Tensor &result) {
     torch::matmul_out(result, ranges, fold_matrix_next_street);
+}
+
+
+TerminalEquity& get_terminal_equity() {
+    static TerminalEquity terminal_equity;
+    return terminal_equity;
 }

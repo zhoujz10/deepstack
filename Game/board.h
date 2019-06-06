@@ -36,7 +36,7 @@ public:
         return memcmp(cards, other.cards, board_size*sizeof(int)) == 0;
     }
 
-    Board& copy_(const Board & src) {
+    Board& copy_(const Board& src) {
         memcpy(cards, src.cards, board_size*sizeof(int));
     }
 

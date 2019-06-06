@@ -95,4 +95,6 @@ const float pot_fractions_by_street[5][2][3] = {
     { { 0.5,  1,  2 }, {  0.5,    1,  2 } },
 };
 
+const float max_number = 9999999999;
+
 #endif //DEEPSTACK_CPP_CONSTANTS_H

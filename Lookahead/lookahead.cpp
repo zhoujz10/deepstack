@@ -3,440 +3,136 @@
 //
 
 
-#include <cmath>
 #include "lookahead.h"
 
 
-
-
-Lookahead::Lookahead(bool is_next) {}
-
-void Lookahead::build_lookahead(Node& tree) {}
-
-
-
-
-
-
-
-
-
-
-
-LookaheadBuilder::LookaheadBuilder(Lookahead& src) {
-    lookahead = &src;
-    lookahead->ccall_action_index = 0;
-    lookahead->fold_action_index = 1;
+Lookahead::Lookahead(bool _is_next) {
+    is_next = _is_next;
+    builder = new LookaheadBuilder(this);
 }
 
-void LookaheadBuilder::_construct_transition_boxes() {
-    if (lookahead->tree->street >= 3)
-        return;
-    lookahead->num_pot_sizes = 0;
-//    TODO: finish this function
-}
-
-void LookaheadBuilder::_compute_structure() {
-    assert (1 <= lookahead->tree->street && lookahead->tree->street <= 4);
-
-    lookahead->acting_player = torch::ones(lookahead->depth+1, torch::kInt32).to(device);
-    lookahead->acting_player[0] = 0;
-    for (int d=1; d<lookahead->depth+1; ++d)
-        lookahead->acting_player[d] = 1 - lookahead->acting_player[d-1];
-    lookahead->bets_count[-2] = 1;
-    lookahead->bets_count[-1] = 1;
-    lookahead->nonallinbets_count[-2] = 1;
-    lookahead->nonallinbets_count[-1] = 1;
-    lookahead->terminal_actions_count[-2] = 0;
-    lookahead->terminal_actions_count[-1] = 0;
-    lookahead->actions_count[-2] = 1;
-    lookahead->actions_count[-1] = 1;
-
-    lookahead->nonterminal_nodes_count[0] = 1;
-    lookahead->nonterminal_nodes_count[1] = lookahead->bets_count[0];
-    lookahead->nonterminal_nonallin_nodes_count[-1] = 1;
-    lookahead->nonterminal_nonallin_nodes_count[0] = 1;
-    lookahead->nonterminal_nonallin_nodes_count[1] = lookahead->nonterminal_nodes_count[1] - 1;
-    lookahead->all_nodes_count[0] = 1;
-    lookahead->all_nodes_count[1] = lookahead->actions_count[0];
-    lookahead->terminal_nodes_count[0] = 0;
-    lookahead->terminal_nodes_count[1] = 2;
-    lookahead->allin_nodes_count[0] = 0;
-    lookahead->allin_nodes_count[1] = 1;
-    lookahead->inner_nodes_count[0] = 1;
-    lookahead->inner_nodes_count[1] = 1;
-
-    for (int d=1; d<lookahead->depth+1; ++d) {
-        lookahead->all_nodes_count[d+1] = lookahead->nonterminal_nonallin_nodes_count[d-1] * lookahead->bets_count[d-1] * lookahead->actions_count[d];
-        lookahead->allin_nodes_count[d+1] = lookahead->nonterminal_nonallin_nodes_count[d-1] * lookahead->bets_count[d-1] * 1;
-        lookahead->nonterminal_nodes_count[d+1] = lookahead->nonterminal_nonallin_nodes_count[d-1] * lookahead->nonallinbets_count[d-1] * lookahead->bets_count[d];
-        lookahead->nonterminal_nonallin_nodes_count[d+1] = lookahead->nonterminal_nonallin_nodes_count[d-1] * lookahead->nonallinbets_count[d-1] * lookahead->nonallinbets_count[d];
-        lookahead->terminal_nodes_count[d+1] = lookahead->nonterminal_nonallin_nodes_count[d-1] * lookahead->bets_count[d-1] * lookahead->terminal_actions_count[d];
-    }
-}
-
-void LookaheadBuilder::construct_data_structures() {
-    _compute_structure();
-
-    if (lookahead->is_next) {
-        lookahead->ranges_data[0] = torch::ones({1, 1, 1, lookahead->river_count, boards_count[4], constants.players_count, river_hand_abstract_count}, torch::kFloat32).to(device) / river_hand_abstract_count;
-        lookahead->ranges_data[1] = torch::ones({lookahead->actions_count[0], 1, 1, lookahead->river_count, boards_count[4], constants.players_count, river_hand_abstract_count}, torch::kFloat32).to(device) / river_hand_abstract_count;
-        lookahead->pot_size[0] = torch::zeros(lookahead->ranges_data[0].sizes(), torch::kFloat32).to(device);
-        lookahead->pot_size[1] = torch::zeros(lookahead->ranges_data[1].sizes(), torch::kFloat32).to(device);
-        lookahead->cfvs_data[0] = torch::zeros(lookahead->ranges_data[0].sizes(), torch::kFloat32).to(device);
-        lookahead->cfvs_data[1] = torch::zeros(lookahead->ranges_data[1].sizes(), torch::kFloat32).to(device);
-
-        if (river_hand_abstract_count != hand_count) {
-            lookahead->ranges_data_hand = torch::zeros({lookahead->river_count, boards_count[4], constants.players_count, hand_count}, torch::kFloat32).to(device);
-            lookahead->ranges_convert = torch::zeros({lookahead->river_count, boards_count[4], constants.players_count, river_hand_abstract_count}, torch::kFloat32).to(device);
-            lookahead->cfvs_data_hand = torch::zeros({lookahead->river_count, boards_count[4], constants.players_count, hand_count}, torch::kFloat32).to(device);
-            lookahead->cfvs_data_hand_memory = lookahead->cfvs_data_hand.clone();
-            lookahead->ranges_data_hand_memory = lookahead->ranges_data_hand.clone();
-        }
-
-        lookahead->average_cfvs_data[0] = torch::zeros(lookahead->ranges_data[0].sizes(), torch::kFloat32);
-        lookahead->average_cfvs_data[1] = torch::zeros(lookahead->ranges_data[1].sizes(), torch::kFloat32);
-        lookahead->placeholder_data[0] = torch::zeros(lookahead->ranges_data[0].sizes(), torch::kFloat32);
-        lookahead->placeholder_data[1] = torch::zeros(lookahead->ranges_data[1].sizes(), torch::kFloat32);
-
-        lookahead->average_strategies_data[1] = torch::zeros({lookahead->actions_count[0], 1, 1, lookahead->river_count, boards_count[4], river_hand_abstract_count}, torch::kFloat32).to(device);
-        lookahead->current_strategy_data[1] = torch::zeros(lookahead->average_strategies_data[1].sizes(), torch::kFloat32).to(device);
-        lookahead->regrets_data[1] = torch::zeros(lookahead->average_strategies_data[1].sizes(), torch::kFloat32).to(device);
-        lookahead->current_regrets_data[1] = torch::zeros(lookahead->average_strategies_data[1].sizes(), torch::kFloat32).to(device);
-        lookahead->positive_regrets_data[1] = torch::zeros(lookahead->average_strategies_data[1].sizes(), torch::kFloat32).to(device);
-        lookahead->empty_action_mask[1] = torch::ones(lookahead->average_strategies_data[1].sizes(), torch::kFloat32).to(device);
-
-        lookahead->regrets_sum[0] = torch::zeros({1, 1, lookahead->river_count, boards_count[4], constants.players_count, river_hand_abstract_count}, torch::kFloat32).to(device);
-        lookahead->regrets_sum[1] = torch::zeros({lookahead->bets_count[-1], 1, lookahead->river_count, boards_count[4], constants.players_count, river_hand_abstract_count}, torch::kFloat32).to(device);
-
-        lookahead->inner_nodes[0] = torch::zeros({1, 1, 1, lookahead->river_count, boards_count[4], constants.players_count, river_hand_abstract_count}, torch::kFloat32).to(device);
-        lookahead->swap_data[0] = lookahead->inner_nodes[0].transpose(1,2).clone();
-        lookahead->inner_nodes_p1[0] = torch::zeros({1, 1, 1, lookahead->river_count, boards_count[4], 1, river_hand_abstract_count}, torch::kFloat32).to(device);
-
-        if (lookahead->depth > 1) {
-            lookahead->inner_nodes[1] = torch::zeros({lookahead->bets_count[0], 1, 1, lookahead->river_count, boards_count[4], constants.players_count, river_hand_abstract_count}, torch::kFloat32).to(device);
-            lookahead->swap_data[1] = lookahead->inner_nodes[1].transpose(1, 2).clone();
-            lookahead->inner_nodes_p1[1] = torch::zeros({lookahead->bets_count[0], 1, 1, lookahead->river_count, boards_count[4], 1, river_hand_abstract_count}, torch::kFloat32).to(device);
-        }
-
-        for (int d=2; d<lookahead->depth+1; ++d) {
-            int r_count = lookahead->river_count;
-            auto it = lookahead->idx_range_by_depth.find(d);
-            if (it != lookahead->idx_range_by_depth.end())
-                r_count = it->second;
-
-            lookahead->ranges_data[d] = torch::zeros({lookahead->actions_count[d-1], lookahead->bets_count[d-2], lookahead->nonterminal_nonallin_nodes_count[d-2], r_count, boards_count[4], constants.players_count, river_hand_abstract_count}, torch::kFloat32).to(device);
-            lookahead->cfvs_data[d] = lookahead->ranges_data[d].clone();
-            lookahead->placeholder_data[d] = lookahead->ranges_data[d].clone();
-            lookahead->pot_size[d] = torch::ones(lookahead->ranges_data[d].sizes(), torch::kFloat32).to(device);
-
-            lookahead->average_strategies_data[d] = torch::zeros({lookahead->actions_count[d-1], lookahead->bets_count[d-2], lookahead->nonterminal_nonallin_nodes_count[d-2], r_count, boards_count[4], river_hand_abstract_count}, torch::kFloat32).to(device);
-            lookahead->current_strategy_data[d] = lookahead->average_strategies_data[d].clone();
-            lookahead->regrets_data[d] = torch::ones(lookahead->average_strategies_data[d].sizes(), torch::kFloat32).to(device) * regret_epsilon;
-            lookahead->current_regrets_data[d] = torch::zeros(lookahead->average_strategies_data[d].sizes(), torch::kFloat32).to(device);
-            lookahead->empty_action_mask[d] = torch::ones(lookahead->average_strategies_data[d].sizes(), torch::kFloat32).to(device);
-            lookahead->positive_regrets_data[d] = lookahead->regrets_data[d].clone();
-
-            lookahead->regrets_sum[d] = torch::zeros({lookahead->bets_count[d-2], lookahead->nonterminal_nonallin_nodes_count[d-2], r_count, boards_count[4], constants.players_count, river_hand_abstract_count}, torch::kFloat32).to(device);
-
-            if (d < lookahead->depth) {
-                lookahead->inner_nodes[d] = torch::zeros({lookahead->bets_count[d-1], lookahead->nonallinbets_count[d-2], lookahead->nonterminal_nonallin_nodes_count[d-2], r_count, boards_count[4], constants.players_count, river_hand_abstract_count}, torch::kFloat32).to(device);
-                lookahead->inner_nodes_p1[d] = torch::zeros({lookahead->bets_count[d-1], lookahead->nonallinbets_count[d-2], lookahead->nonterminal_nonallin_nodes_count[d-2], r_count, boards_count[4], 1, river_hand_abstract_count}, torch::kFloat32).to(device);
-                lookahead->swap_data[d] = lookahead->inner_nodes[d].transpose(1,2).clone();
-            }
-        }
-    }
+void Lookahead::build_lookahead(Node& _tree) {
+    if (is_next)
+        builder->build_from_tree(_tree, terminal_equity.river_hand_abstract_count);
     else {
-        lookahead->ranges_data[0] = torch::ones({1, 1, 1, constants.players_count, hand_count}, torch::kFloat32).to(device) / hand_count;
-        lookahead->ranges_data[1] = torch::ones({lookahead->actions_count[0], 1, 1, constants.players_count, hand_count}, torch::kFloat32).to(device) / hand_count;
-        lookahead->pot_size[0] = torch::zeros(lookahead->ranges_data[0].sizes(), torch::kFloat32).to(device);
-        lookahead->pot_size[1] = torch::zeros(lookahead->ranges_data[1].sizes(), torch::kFloat32).to(device);
-        lookahead->cfvs_data[0] = torch::zeros(lookahead->ranges_data[0].sizes(), torch::kFloat32).to(device);
-        lookahead->cfvs_data[1] = torch::zeros(lookahead->ranges_data[1].sizes(), torch::kFloat32).to(device);
-        lookahead->average_cfvs_data[0] = torch::zeros(lookahead->ranges_data[0].sizes(), torch::kFloat32).to(device);
-        lookahead->average_cfvs_data[1] = torch::zeros(lookahead->ranges_data[1].sizes(), torch::kFloat32).to(device);
-        lookahead->placeholder_data[0] = torch::zeros(lookahead->ranges_data[0].sizes(), torch::kFloat32).to(device);
-        lookahead->placeholder_data[1] = torch::zeros(lookahead->ranges_data[1].sizes(), torch::kFloat32).to(device);
-
-        lookahead->average_strategies_data[1] = torch::zeros({lookahead->actions_count[0], 1, 1, hand_count}, torch::kFloat32).to(device);
-        lookahead->current_strategy_data[1] = torch::zeros(lookahead->average_strategies_data[1].sizes(), torch::kFloat32).to(device);
-        lookahead->regrets_data[1] = torch::zeros(lookahead->average_strategies_data[1].sizes(), torch::kFloat32).to(device);
-        lookahead->current_regrets_data[1] = torch::zeros(lookahead->average_strategies_data[1].sizes(), torch::kFloat32).to(device);
-        lookahead->positive_regrets_data[1] = torch::zeros(lookahead->average_strategies_data[1].sizes(), torch::kFloat32).to(device);
-        lookahead->empty_action_mask[1] = torch::ones(lookahead->average_strategies_data[1].sizes(), torch::kFloat32).to(device);
-
-        lookahead->regrets_sum[0] = torch::zeros({1, 1, constants.players_count, hand_count}, torch::kFloat32).to(device);
-        lookahead->regrets_sum[1] = torch::zeros({lookahead->bets_count[-1], 1, constants.players_count, hand_count}, torch::kFloat32).to(device);
-
-        lookahead->inner_nodes[0] = torch::zeros({1, 1, 1, constants.players_count, hand_count}, torch::kFloat32).to(device);
-        lookahead->swap_data[0] = lookahead->inner_nodes[0].transpose(1,2).clone();
-        lookahead->inner_nodes_p1[0] = torch::zeros({1, 1, 1, 1, hand_count}, torch::kFloat32).to(device);
-
-        if (lookahead->depth > 1) {
-            lookahead->inner_nodes[1] = torch::zeros({lookahead->bets_count[0], 1, 1, constants.players_count, hand_count}, torch::kFloat32).to(device);
-            lookahead->swap_data[1] = lookahead->inner_nodes[1].transpose(1,2).clone();
-            lookahead->inner_nodes_p1[1] = torch::zeros({lookahead->bets_count[0], 1, 1, 1, hand_count}, torch::kFloat32).to(device);
-        }
-
-        for (int d=2; d<lookahead->depth+1; ++d) {
-            lookahead->ranges_data[d] = torch::zeros({lookahead->actions_count[d-1], lookahead->bets_count[d-2], lookahead->nonterminal_nonallin_nodes_count[d-2], constants.players_count, hand_count}, torch::kFloat32).to(device);
-            lookahead->cfvs_data[d] = lookahead->ranges_data[d].clone();
-            lookahead->placeholder_data[d] = lookahead->ranges_data[d].clone();
-            lookahead->pot_size[d] = torch::ones(lookahead->ranges_data[d].sizes(), torch::kFloat32).to(device) * stack;
-    
-            lookahead->average_strategies_data[d] = torch::zeros({lookahead->actions_count[d-1], lookahead->bets_count[d-2], lookahead->nonterminal_nonallin_nodes_count[d-2], hand_count}, torch::kFloat32).to(device);
-            lookahead->current_strategy_data[d] = lookahead->average_strategies_data[d].clone();
-            lookahead->regrets_data[d] = torch::ones(lookahead->average_strategies_data[d].sizes(), torch::kFloat32).to(device) * regret_epsilon;
-            lookahead->current_regrets_data[d] = torch::zeros(lookahead->average_strategies_data[d].sizes(), torch::kFloat32).to(device);
-            lookahead->empty_action_mask[d] = torch::ones(lookahead->average_strategies_data[d].sizes(), torch::kFloat32).to(device);
-            lookahead->positive_regrets_data[d] = lookahead->regrets_data[d].clone();
-    
-            lookahead->regrets_sum[d] = torch::zeros({lookahead->bets_count[d-2], lookahead->nonterminal_nonallin_nodes_count[d-2], constants.players_count, hand_count}, torch::kFloat32).to(device);
-    
-            if (d < lookahead->depth) {
-                lookahead->inner_nodes[d] = torch::zeros({lookahead->bets_count[d-1], lookahead->nonallinbets_count[d-2], lookahead->nonterminal_nonallin_nodes_count[d-2], constants.players_count, hand_count}, torch::kFloat32).to(device);
-                lookahead->inner_nodes_p1[d] = torch::zeros({lookahead->bets_count[d-1], lookahead->nonallinbets_count[d-2], lookahead->nonterminal_nonallin_nodes_count[d-2], 1, hand_count}, torch::kFloat32).to(device);
-                lookahead->swap_data[d] = lookahead->inner_nodes[d].transpose(1,2).clone();
-            }
-        }
+        terminal_equity.set_board(tree->board, tree->limit_to_street);
+        builder->build_from_tree(_tree);
     }
-
-    if (lookahead->is_next) {
-        for (int d=1; d<lookahead->depth+1; ++d)
-            if (d > 1 || lookahead->first_call_terminal) {
-                int before = lookahead->num_term_call_nodes;
-                lookahead->num_term_call_nodes += lookahead->ranges_data[d][1].sizes()[0] * lookahead->ranges_data[d][1].sizes()[1] * lookahead->ranges_data[d][1].sizes()[2] * boards_count[4];
-                lookahead->term_call_indices[d] = std::pair<int, int>(before, lookahead->num_term_call_nodes);
-            }
-
-        for (int d=1; d<lookahead->depth+1; ++d) {
-            int before = lookahead->num_term_fold_nodes;
-            lookahead->num_term_fold_nodes += lookahead->ranges_data[d][0].sizes()[0] * lookahead->ranges_data[d][0].sizes()[1] * lookahead->ranges_data[d][0].sizes()[2] * boards_count[4];
-            lookahead->term_fold_indices[d] = std::pair<int, int>(before, lookahead->num_term_fold_nodes);
-        }
-
-        lookahead->ranges_data_call = torch::zeros({lookahead->num_term_call_nodes, 2, river_hand_abstract_count}, torch::kFloat32).to(device);
-        lookahead->ranges_data_fold = torch::zeros({lookahead->num_term_fold_nodes, 2, river_hand_abstract_count}, torch::kFloat32).to(device);
-
-        lookahead->cfvs_data_call = torch::zeros({lookahead->num_term_call_nodes, 2, river_hand_abstract_count}, torch::kFloat32).to(device);
-        lookahead->cfvs_data_fold = torch::zeros({lookahead->num_term_fold_nodes, 2, river_hand_abstract_count}, torch::kFloat32).to(device);
-    }
-    else {
-        for (int d=1; d<lookahead->depth+1; ++d)
-            if (d > 1 || lookahead->first_call_terminal) {
-                int before = lookahead->num_term_call_nodes;
-                if (lookahead->tree->street != 4) {
-                    lookahead->num_term_call_nodes += lookahead->ranges_data[d][1][-1].sizes()[0];
-                    lookahead->term_call_indices[d] = std::pair<int, int>(before, lookahead->num_term_call_nodes);
-                }
-                else {
-                    lookahead->num_term_call_nodes += lookahead->ranges_data[d][1].sizes()[0] * lookahead->ranges_data[d][1].sizes()[1];
-                    lookahead->term_call_indices[d] = std::pair<int, int>(before, lookahead->num_term_call_nodes);
-                }
-            }
-
-        for (int d=1; d<lookahead->depth+1; ++d) {
-            int before = lookahead->num_term_fold_nodes;
-            lookahead->num_term_fold_nodes += lookahead->ranges_data[d][0].sizes()[0] * lookahead->ranges_data[d][0].sizes()[1];
-            lookahead->term_fold_indices[d] = std::pair<int, int>(before, lookahead->num_term_fold_nodes);
-        }
-
-        lookahead->ranges_data_call = torch::zeros({lookahead->num_term_call_nodes, 2, hand_count}, torch::kFloat32).to(device);
-        lookahead->ranges_data_fold = torch::zeros({lookahead->num_term_fold_nodes, 2, hand_count}, torch::kFloat32).to(device);
-
-        lookahead->cfvs_data_call = torch::zeros({lookahead->num_term_call_nodes, 2, hand_count}, torch::kFloat32).to(device);
-        lookahead->cfvs_data_fold = torch::zeros({lookahead->num_term_fold_nodes, 2, hand_count}, torch::kFloat32).to(device);
-
-    }
-
 }
 
-void LookaheadBuilder::set_datastructures_from_tree_dfs(Node& node, const int layer, const int action_id, const int parent_id,
-                                      const int gp_id, const int cur_action_id, const int parent_action_id) {
-    assert (node.pot > 0);
-    if (lookahead->is_next) {
-        for (int j=0; j<lookahead->river_count; ++j) {
-            if (lookahead->idx_range_by_depth.find(layer) != lookahead->idx_range_by_depth.end() && j >= lookahead->idx_range_by_depth[layer])
-                continue;
-            lookahead->pot_size[layer][action_id][parent_id][gp_id][j] = *std::min_element(node.all_river_bets[j], node.all_river_bets[j]+1);
-        }
+void Lookahead::resolve_first_node(torch::Tensor player_range, torch::Tensor opponent_range) {
+    ranges_data[0].slice(3, 0, 1, 1).copy_(player_range);
+    ranges_data[0].slice(3, 1, -1, 1).copy_(opponent_range);
+    _compute();
+}
+
+void Lookahead::resolve(torch::Tensor player_range, torch::Tensor opponent_cfvs, torch::Tensor opponent_range_warm_start) {
+//    reconstruction_gadget = CFRDGadget(self.tree['board'], player_range, opponent_cfvs, opponent_range_warm_start)
+    ranges_data[0].slice(3, 0, 1, 1).copy_(player_range);
+//    reconstruction_opponent_cfvs = opponent_cfvs
+    _compute();
+}
+
+void Lookahead::_compute() {
+//    for (int _iter=0; _iter<cfr_iters[tree->street]; ++_iter) {
+//        _set_opponent_starting_range(_iter);
+//        _compute_current_strategies();
+//        _compute_ranges();
+//        _compute_update_average_strategies(_iter);
+//        _compute_terminal_equities(_iter);
+//        _compute_cfvs();
+//        _compute_regrets();
+//        _compute_cumulate_average_cfvs(_iter);
+//    }
+//    _compute_normalize_average_strategies();
+//    _compute_normalize_average_cfvs();
+}
+
+void Lookahead::_compute_current_strategies() {
+    for (int d=1; d<depth+1; ++d) {
+        positive_regrets_data[d].copy_(regrets_data[d].clamp(regret_epsilon, max_number));
+        positive_regrets_data[d] *= empty_action_mask[d];
+
+        regrets_sum[d].slice(2, 0, 1, 1).copy_(positive_regrets_data[d].sum(0));
+        current_strategy_data[d].copy_(positive_regrets_data[d] / regrets_sum[d].slice(2, 0, 1, 1).expand_as(positive_regrets_data[d]));
     }
-    else
-        lookahead->pot_size[layer][action_id][parent_id][gp_id] = node.pot;
 
-    if (layer == 2 && cur_action_id == constants.actions.ccall)
-        lookahead->parent_action_id[parent_id] = parent_action_id;
+    if (tree->street == 3 && *std::max_element(tree->bets, tree->bets+1) < stack)
+        river_lookahead->_compute_current_strategies_next_street();
+}
 
-    if (node.current_player == constants.players.chance)
-        assert (parent_id <= lookahead->nonallinbets_count[layer - 2] - 1);
+void Lookahead::_compute_current_strategies_next_street() {
+    for (int d=1; d<depth+1; ++d) {
+        positive_regrets_data[d].copy_(regrets_data[d].clamp(regret_epsilon, max_number));
 
-    if (layer < lookahead->depth + 1) {
-        int gp_nonallinbets_count = lookahead->nonallinbets_count[layer-2];
-        int prev_layer_terminal_actions_count = lookahead->terminal_actions_count[layer-1];
+        positive_regrets_data[d] *= empty_action_mask[d];
 
-        int next_parent_id = action_id - prev_layer_terminal_actions_count;
-        int next_gp_id = gp_id * gp_nonallinbets_count + parent_id;
+        regrets_sum[d].slice(4, 0, 1, 1).copy_(positive_regrets_data[d].sum(0));
+        current_strategy_data[d].copy_(positive_regrets_data[d] / regrets_sum[d].slice(4, 0, 1, 1).expand_as(positive_regrets_data[d]));
+    }
+}
 
-        if (!node.terminal && (node.current_player == constants.players.chance)) {
+void Lookahead::_compute_ranges() {
+    for (int d=0; d<depth; ++d) {
+        torch::Tensor& current_level_ranges = ranges_data[d];
+        torch::Tensor& next_level_ranges = ranges_data[d+1];
 
-            assert (parent_id <= lookahead->nonallinbets_count[layer - 2] - 1);
-            bool node_with_empty_actions = node.children->size() < lookahead->actions_count[layer];
+        int prev_layer_terminal_actions_count = terminal_actions_count[d-1];
+        int prev_layer_bets_count = bets_count[d-1];
+        int gp_layer_nonallin_bets_count = nonallinbets_count[d-2];
 
-            if (node_with_empty_actions) {
+        inner_nodes[d].copy_(current_level_ranges.slice(0, prev_layer_terminal_actions_count, -1, 1).slice(1, 0, gp_layer_nonallin_bets_count, 1));
+        const torch::Tensor& super_view = inner_nodes[d].transpose(1,2).view({1, prev_layer_bets_count, -1, constants.players_count, hand_count});
+        next_level_ranges.copy_(super_view.expand_as(next_level_ranges));
 
-                assert (layer > 0);
-                int terminal_actions_count = lookahead->terminal_actions_count[layer];
-                assert (terminal_actions_count == 2);
-                int existing_bets_count = node.children->size() - terminal_actions_count;
+        next_level_ranges.slice(3, acting_player.data<int>()[d], acting_player.data<int>()[d]+1, 1) *= current_strategy_data[d+1];
+    }
 
-                if (existing_bets_count == 0)
-                    assert (action_id == lookahead->actions_count[layer - 1] - 1);
+    if (tree->street == 3 && *std::max_element(tree->bets, tree->bets+1) < stack) {
+        for (auto& t : next_street_lookahead) {
+            auto layer = std::get<0>(t);
+            auto action_id = std::get<1>(t);
+            auto parent_id = std::get<2>(t);
+            auto gp_id = std::get<3>(t);
+            auto i = std::get<4>(t);
 
-                for (int child_id = 0; child_id < terminal_actions_count; ++child_id) {
-                    auto child_node = (*node.children)[child_id];
-                    set_datastructures_from_tree_dfs(child_node, layer + 1, child_id, next_parent_id, next_gp_id, node.actions[child_id], cur_action_id);
-                }
+            const torch::Tensor& rd_slice = ranges_data[layer].slice(0, action_id, action_id+1, 1)
+                    .slice(1, parent_id, parent_id+1, 1).slice(2, gp_id, gp_id+1, 1);
+            river_lookahead->ranges_convert[i].copy_(torch::bmm(rd_slice.view({1,2,hand_count}).expand({48,-1,-1}), terminal_equity.river_hand_abstract));
+            river_lookahead->ranges_data_hand[i].copy_(rd_slice.expand_as(river_lookahead->ranges_data_hand[i]));
 
-                for (int b = 0; b < existing_bets_count; ++b)
-                    set_datastructures_from_tree_dfs((*node.children)[node.children->size() - b - 1], layer + 1, lookahead->actions_count[layer] - b - 1,
-                                                     next_parent_id, next_gp_id, node.actions[node.children->size() - b - 1], cur_action_id);
+            river_lookahead->ranges_data_hand[i].masked_fill_(terminal_equity.mask_next_street, 0);
 
-                if (existing_bets_count == 0)
-                    lookahead->empty_action_mask[layer + 1].slice(0, terminal_actions_count, -1, 1)[next_parent_id][next_gp_id] = 0;
-                else {
-                    lookahead->empty_action_mask[layer + 1].slice(0, terminal_actions_count, -existing_bets_count, 1)[next_parent_id][next_gp_id] = 0;
-
-                    if (lookahead->is_next)
-                        for (int j = 1; j < lookahead->river_count; ++j) {
-                            if (lookahead->idx_range_by_depth.find(layer + 1) != lookahead->idx_range_by_depth.end() &&
-                                j >= lookahead->idx_range_by_depth[layer + 1])
-                                continue;
-                            for (int b = 0; b < existing_bets_count; ++b) {
-                                auto child_node = (*node.children)[(*node.children).size() - b - 1];
-                                if (!child_node.all_river_valid[j])
-                                    lookahead->empty_action_mask[layer + 1][lookahead->actions_count[layer] - b - 1][next_parent_id][next_gp_id][j] = 0;
-                            }
-                        }
-                }
-            }
+            if (tree->current_player == 0)
+                river_lookahead->ranges_data[0].slice(0, 0, 1, 1).slice(1, 0, 1, 1).slice(2, 0, 1, 1).copy_(river_lookahead->ranges_convert);
             else {
-                for (int child_id = 0; child_id < node.children->size(); ++child_id) {
-                    auto child_node = (*node.children)[child_id];
-                    set_datastructures_from_tree_dfs(child_node, layer + 1, child_id, next_parent_id, next_gp_id, node.actions[child_id], cur_action_id);
-                }
-
-                if (lookahead->is_next) {
-                    int terminal_actions_count = lookahead->terminal_actions_count[layer];
-                    int existing_bets_count = node.children->size() - terminal_actions_count;
-                    for (int j = 1; j < lookahead->river_count; ++j) {
-                        if (lookahead->idx_range_by_depth.find(layer + 1) != lookahead->idx_range_by_depth.end() &&
-                            j >= lookahead->idx_range_by_depth[layer + 1])
-                            continue;
-                        for (int b = 0; b < existing_bets_count; ++b) {
-                            auto child_node = (*node.children)[(*node.children).size() - b - 1];
-                            if (!child_node.all_river_valid[j])
-                                lookahead->empty_action_mask[layer + 1][lookahead->actions_count[layer] - b - 1][next_parent_id][next_gp_id][j] = 0;
-                        }
-                    }
-                }
+                river_lookahead->ranges_data[0].slice(0, 0, 1, 1).slice(1, 0, 1, 1).slice(2, 0, 1, 1).slice(5, 0, 1, 1).copy_(
+                        river_lookahead->ranges_convert.slice(2, 1, -1, 1));
+                river_lookahead->ranges_data[0].slice(0, 0, 1, 1).slice(1, 0, 1, 1).slice(2, 0, 1, 1).slice(5, 1, -1, 1).copy_(
+                        river_lookahead->ranges_convert.slice(2, 0, 1, 1));
             }
-        }
-        else if (node.street == 3 && (node.current_player == constants.players.chance) && node.next_street_root != nullptr) {
-            lookahead->next_street_lookahead.push_back(std::tuple<int, int, int, int, int, int>(layer, action_id, parent_id, gp_id, node.river_idx, lookahead->tree->river_pots[node.river_idx]));
+            river_lookahead->_compute_ranges_next_street();
         }
     }
 }
 
-void LookaheadBuilder::build_from_tree(Node& tree, const int _river_hand_abstract_count) {
-    river_hand_abstract_count = _river_hand_abstract_count;
+void Lookahead::_compute_ranges_next_street() {
+    for (int d=0; d<depth; ++d) {
+        torch::Tensor& current_level_ranges = ranges_data[d];
+        torch::Tensor& next_level_ranges = ranges_data[d+1];
 
-    lookahead->tree = &tree;
-    lookahead->depth = tree.depth;
+        int prev_layer_terminal_actions_count = terminal_actions_count[d-1];
+        int prev_layer_bets_count = bets_count[d-1];
+        int gp_layer_nonallin_bets_count = nonallinbets_count[d-2];
 
-    std::vector<Node*> t = { &tree };
-    _compute_tree_structures(t, 0);
-
-    lookahead->first_call_terminal = (*tree.children)[1].terminal;
-    lookahead->first_call_transition = (*tree.children)[1].current_player == constants.players.chance;
-    lookahead->first_call_check = (!lookahead->first_call_terminal) && (!lookahead->first_call_transition);
-
-    construct_data_structures();
-
-    set_datastructures_from_tree_dfs(tree, 0, 0, 0, 0, 0, -100);
-
-    if (tree.street == 3 && *std::max_element(tree.bets, tree.bets+1) < stack) {
-        lookahead->river_count = tree.river_count;
-        lookahead->river_lookahead = new Lookahead(true);
-
-        for (auto pot : lookahead->tree->river_pots) {
-            if (pot == 0)
-                break;
-            lookahead->max_depth.push_back((int)ceil(log((double)stack / pot) / log(3)) + 2);
-        }
-
-        for (int d=4; d<*std::max_element(lookahead->max_depth.begin(), lookahead->max_depth.end())+1; ++d)
-            for (auto it=lookahead->max_depth.begin(); it!=lookahead->max_depth.end(); ++it)
-                if (*it < d) {
-                    lookahead->river_lookahead->idx_range_by_depth[d] = it - lookahead->max_depth.begin();
-                    break;
-                }
-
-        lookahead->river_lookahead->river_count = lookahead->river_count;
-        lookahead->river_lookahead->terminal_equity = lookahead->terminal_equity;
-        lookahead->river_lookahead->build_lookahead(*tree.river_tree_node->next_street_root);
-    }
-
-    assert (lookahead->terminal_actions_count[0] == 1 || lookahead->terminal_actions_count[0] == 2);
-
-    if (tree.bets[0] == tree.bets[1])
-        lookahead->empty_action_mask[1][0] = 0;
-
-    _construct_transition_boxes();
-}
-
-
-
-void LookaheadBuilder::_compute_tree_structures(std::vector<Node*>& current_layer, const int current_depth) {
-
-    int layer_actions_count = 0;
-    int layer_terminal_actions_count = 0;
-    std::vector<Node*> next_layer;
-
-    for (auto node_ptr : current_layer) {
-        layer_actions_count = std::max(layer_actions_count, (int)node_ptr->children->size());
-
-        int node_terminal_actions_count = 0;
-        for (auto& child : *node_ptr->children)
-            if (child.terminal || child.current_player == constants.players.chance)
-                node_terminal_actions_count ++;
-
-        layer_terminal_actions_count = std::max(layer_terminal_actions_count, node_terminal_actions_count);
-
-        if (!node_ptr->terminal)
-            for (auto& child : *node_ptr->children)
-                next_layer.push_back(&child);
-    }
-
-    assert ((layer_actions_count == 0) == (!next_layer.empty()));
-    assert ((layer_actions_count == 0) == (current_depth == lookahead->depth));
-
-    lookahead->bets_count[current_depth] = layer_actions_count - layer_terminal_actions_count;
-
-    lookahead->nonallinbets_count[current_depth] = layer_actions_count - layer_terminal_actions_count - 1;
-
-    if (layer_actions_count == 2) {
-        assert (layer_actions_count == layer_terminal_actions_count);
-        lookahead->nonallinbets_count[current_depth] = 0;
-    }
-
-    lookahead->terminal_actions_count[current_depth] = layer_terminal_actions_count;
-    lookahead->actions_count[current_depth] = layer_actions_count;
-
-    if (!next_layer.empty()) {
-        assert (layer_actions_count >= 2);
-        _compute_tree_structures(next_layer, current_depth + 1);
+        inner_nodes[d].copy_(current_level_ranges.slice(0, prev_layer_terminal_actions_count, -1, 1).slice(1, 0, gp_layer_nonallin_bets_count, 1));
+//        if (idx_range_by_depth.find(d) != idx_range_by_depth.end())
+//            super_view = self.inner_nodes[d].transpose(1,2).reshape((1, prev_layer_bets_count, -1, self.idx_range_by_depth[d], 48, constants['players_count'], self.terminal_equity.river_hand_abstract_count))
+//        else
+//            super_view = self.inner_nodes[d].transpose(1,2).reshape((1, prev_layer_bets_count, -1, self.river_count, 48, constants['players_count'], self.terminal_equity.river_hand_abstract_count))
     }
 }
+
 
 
 

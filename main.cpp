@@ -11,18 +11,41 @@
 #include "Tree/poker_tree_builder.h"
 
 
+
 int main() {
 
     clock_t start = clock();
 
 //    auto device = c10::Device(c10::DeviceType::CUDA);
 
-//    torch::zeros({2, 2}, torch::kFloat32);
-//    float a[][3] = {{4,3,2},{1,5,6}};
-//    torch::Tensor tensor = torch::from_blob(a, {2, 3}, torch::kFloat32);
-//    std::cout << tensor.sizes() << endl;
+
+    float a[][3] = {{4,3,2},{1,5,6}};
+    torch::Tensor tensor = torch::from_blob(a, {2, 3}, torch::kFloat32);
+    std::cout << tensor.sizes() << endl;
 //    tensor = tensor.slice(1, 0, 2);
 //    std::cout << tensor << std::endl;
+//
+//    torch::Tensor tensor_2 = torch::zeros({hand_count, hand_count}, torch::kFloat32);
+//    CardTools& c = get_card_tools();
+//    auto te = get_terminal_equity();
+
+    torch::Tensor t2;
+
+    t2 = tensor.slice(1, 0, 2, 1);
+    t2.contiguous();
+    t2.view({4, 1});
+
+    std::cout << t2 << endl;
+
+    t2[0] = 10;
+
+    std::cout << t2 << endl;
+    std::cout << tensor << endl;
+
+
+    std::cout << tensor.sum(0) << std::endl;
+    std::cout << tensor.sum(1) << std::endl;
+
 
     int cards[5] = { 1, 2, 3, -1, -1 };
     int bets[2] = { 100, 100 };
@@ -55,19 +78,21 @@ int main() {
 //    std::cout << tensor.data<float>()[1] << std::endl;
 //    std::cout << (tensor[0].to(torch::kFloat32) > 0) << std::endl;
 
-    std::vector<int> tmp = { 5, 4, 3, 6, 7 };
-    for (auto it=tmp.begin(); it!=tmp.end(); ++it)
-        std::cout << it - tmp.begin() << ' ';
-    std::cout << std::endl;
+//    std::vector<int> tmp = { 5, 4, 3, 6, 7 };
+//    for (auto it=tmp.begin(); it!=tmp.end(); ++it)
+//        std::cout << it - tmp.begin() << ' ';
+//    std::cout << std::endl;
+//
+//    auto test = torch::zeros({5, 3, 2}, torch::kFloat32);
+//    test[1][1] = 1;
+//    test[3] = 2;
+//    print(test[-1]);
+//
+//    test.slice(0, 3, -1, 1) = 3;
+//
+//    std::cout << test << std::endl;
 
-    auto test = torch::zeros({5, 3, 2}, torch::kFloat32);
-    test[1][1] = 1;
-    test[3] = 2;
-    print(test[-1]);
 
-    test.slice(0, 3, -1, 1) = 3;
-
-    std::cout << test << std::endl;
 
     clock_t end = clock();
     cout << (double)(end-start)/CLOCKS_PER_SEC << " seconds have been spent." << endl;

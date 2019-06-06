@@ -16,6 +16,8 @@
 #include "../Tree/poker_tree_builder.h"
 
 
+class LookaheadBuilder;
+
 class Lookahead {
 public:
 
@@ -26,7 +28,7 @@ public:
     bool is_next;
     int river_count = 0;
 
-    Node *tree;
+    Node *tree = nullptr;
 
     torch::Tensor acting_player;
 
@@ -79,16 +81,19 @@ public:
 
     std::vector<std::tuple<int, int, int, int, int, int>> next_street_lookahead;
     Lookahead* river_lookahead = nullptr;
+    LookaheadBuilder* builder = nullptr;
     std::vector<int> max_depth;
 
-    TerminalEquity *terminal_equity = nullptr;
+    TerminalEquity& terminal_equity = get_terminal_equity();
 
-    bool first_call_terminal;
-    bool first_call_transition;
-    bool first_call_check;
+    int next_board_idx = 0;
 
-    Lookahead(bool is_next=false);
-    void build_lookahead(Node& tree);
+    bool first_call_terminal = false;
+    bool first_call_transition = false;
+    bool first_call_check = false;
+
+    explicit Lookahead(bool _is_next=false);
+    void build_lookahead(Node& _tree);
     void resolve_first_node(torch::Tensor player_range, torch::Tensor opponent_range);
     void resolve(torch::Tensor player_range, torch::Tensor opponent_cfvs, torch::Tensor opponent_range_warm_start);
     torch::Tensor& get_chance_action_cfv(const int action_index, const int action, Board& board);
@@ -124,7 +129,7 @@ public:
     Lookahead* lookahead = nullptr;
 
 
-    explicit LookaheadBuilder(Lookahead& src);
+    explicit LookaheadBuilder(Lookahead *ptr);
 
     void construct_data_structures();
     void set_datastructures_from_tree_dfs(Node& node, const int layer, const int action_id, const int parent_id,

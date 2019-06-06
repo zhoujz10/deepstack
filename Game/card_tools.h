@@ -17,30 +17,35 @@ class CardTools {
 
 public:
 
-    static torch::Tensor hand_collide;
+    torch::Tensor hand_collide = torch::zeros({hand_count, hand_count}, torch::kFloat32).to(device);
 
-    static auto init_hand_collide() {
+    CardTools() {
         auto p = new float[hand_count * hand_count];
+        memset(p, 0, hand_count*hand_count*sizeof(float));
         read_pointer(p, hand_collide_file);
-        return torch::from_blob(p, {hand_count, hand_count}, torch::kFloat32).to(device);
+        hand_collide .copy_(torch::from_blob(p, {hand_count, hand_count}, torch::kFloat32));
+        free(p);
     }
 
-    static void get_possible_hand_indexes(Board& board, torch::Tensor& possible_hand_indexes) {
+    void get_possible_hand_indexes(Board& board, torch::Tensor& possible_hand_indexes) {
         possible_hand_indexes.fill_(1);
-        if (board.street() == 0)
+        if (board.street() == 1)
             return ;
         for (auto _card : board.cards)
-            for (auto hand : card_hand_collide[_card])
+            for (auto hand : card_hand_collide[_card]) {
+                if (_card < 0)
+                    break;
                 possible_hand_indexes[hand] = 0;
+            }
     }
 
-    static void get_impossible_hand_indexes(Board& board, torch::Tensor& possible_hand_indexes) {
+    void get_impossible_hand_indexes(Board& board, torch::Tensor& possible_hand_indexes) {
         get_possible_hand_indexes(board, possible_hand_indexes);
         possible_hand_indexes += -1;
         possible_hand_indexes *= -1;
     }
 
-    static void get_uniform_range(Board &board, torch::Tensor &range) {
+    void get_uniform_range(Board &board, torch::Tensor &range) {
         get_possible_hand_indexes(board, range);
         range /= range.sum();
     }
@@ -95,12 +100,15 @@ public:
         return get_board_idx_cpp(board.cards[0], board.cards[1], board.cards[2], board.cards[3], board.cards[4]);
     }
 
-    static void normalize_range(Board &board, torch::Tensor &range, torch::Tensor &out) {
+    void normalize_range(Board &board, torch::Tensor &range, torch::Tensor &out) {
         get_possible_hand_indexes(board, out);
         out *= range;
         out /= out.sum();
     }
 };
+
+
+CardTools& get_card_tools();
 
 
 #endif //DEEPSTACK_CPP_CARD_TOOLS_H
