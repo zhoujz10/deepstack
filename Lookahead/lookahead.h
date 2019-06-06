@@ -98,7 +98,7 @@ public:
     void resolve_first_node(torch::Tensor player_range, torch::Tensor opponent_range);
     void resolve(torch::Tensor player_range, torch::Tensor opponent_cfvs, torch::Tensor opponent_range_warm_start);
     torch::Tensor& get_chance_action_cfv(int action_index, int action, Board& board);
-    auto get_results();
+    void get_results(std::map<std::string, torch::Tensor> &out);
 
 private:
     void _compute();
