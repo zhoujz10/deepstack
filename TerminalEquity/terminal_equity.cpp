@@ -55,8 +55,8 @@ void TerminalEquity::_set_call_matrix() {
             break;
         }
         case 2: {
-            int card_0 = *min_element(board.cards, board.cards+2);
-            int card_2 = *max_element(board.cards, board.cards+2);
+            int card_0 = *min_element(board.cards, board.cards+3);
+            int card_2 = *max_element(board.cards, board.cards+3);
             int card_1 = board.cards[0] + board.cards[1] + board.cards[2] - card_0 - card_2;
             char equity_matrix_file[50];
             sprintf(equity_matrix_file, "%s%d_%d_%d.bin", flop_equity_matrix_dir, card_0, card_1, card_2);

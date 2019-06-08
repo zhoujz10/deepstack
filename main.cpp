@@ -9,12 +9,25 @@
 #include "Game/card_tools.h"
 #include "Game/bet_sizing.h"
 #include "Tree/poker_tree_builder.h"
+#include "Lookahead/resolving.h"
 
 
 
 int main() {
 
-    clock_t start = clock();
+    auto card_tools = get_card_tools();
+
+//    clock_t start = clock();
+
+
+    auto n = chrono::system_clock::now();
+    auto m = n.time_since_epoch();
+    auto diff = std::chrono::duration_cast<std::chrono::milliseconds>(m).count();
+    auto msecs = diff % 1000;
+
+    std::time_t t = std::chrono::system_clock::to_time_t(n);
+    cout << std::put_time(std::localtime(&t), "%Y-%m-%d %H.%M.%S") << "." << msecs << endl;
+
 
 //    auto device = c10::Device(c10::DeviceType::CUDA);
 
@@ -43,9 +56,7 @@ int main() {
 //    std::cout << tensor.sum(1) << std::endl;
 //
 //
-//    int cards[5] = { 1, 2, 3, -1, -1 };
-//    int bets[2] = { 100, 100 };
-//    Node build_tree_params( cards, bets );
+
 //    PokerTreeBuilder ptb;
 //    auto root_node = ptb.build_tree(build_tree_params);
 //    for (auto& child : *root_node->children)
@@ -66,7 +77,6 @@ int main() {
 //    tensor.fill_(1);
 //    std::cout << tensor << std::endl;
 
-//    cout << CardTools::hand_collide[0][0];
 
 //    auto terminal_equity = TerminalEquity();
 
@@ -80,7 +90,7 @@ int main() {
 //    std::cout << std::endl;
 //
 //    auto test = torch::zeros({5, 3, 2}, torch::kFloat32);
-//    test[1][1] = 1;
+//    test[4][1] = 1;
 //    test[3] = 2;
 //    print(test[-1]);
 //
@@ -90,10 +100,39 @@ int main() {
 
 
 
+    int cards[5] = {  5, 45, 11, 43, -1 };
+    int bets[2] = { 100, 100 };
+    Node build_tree_node( cards, bets );
+    build_tree_node.current_player = constants.players.P1;
+    torch::Tensor player_range = torch::zeros(hand_count, torch::kFloat32).to(device);
+    torch::Tensor opponent_range = torch::zeros(hand_count, torch::kFloat32).to(device);
+
+    card_tools.get_uniform_range(build_tree_node.board, player_range);
+    card_tools.get_uniform_range(build_tree_node.board, opponent_range);
+
+    Resolving resolving;
+    std::map<std::string, torch::Tensor> results;
+    resolving.resolve_first_node(build_tree_node, player_range, opponent_range, results);
+
+    std::cout << results["root_cfvs_both_players"] << std::endl;
 
 
 
-    clock_t end = clock();
-    cout << (double)(end-start)/CLOCKS_PER_SEC << " seconds have been spent." << endl;
+//    float a[6] = {1,2,3,4,5,6};
+//    torch::Tensor tensor = torch::from_blob(a, {2,3}, torch::kFloat32);
+//    tensor.masked_fill_(tensor.eq(1), 100);
+//    std::cout << tensor << endl;
+
+
+//    clock_t end = clock();
+//    cout << (double)(end-start)/CLOCKS_PER_SEC << " seconds have been spent." << endl;
+
+    n = chrono::system_clock::now();
+    m = n.time_since_epoch();
+    diff = std::chrono::duration_cast<std::chrono::milliseconds>(m).count();
+    msecs = diff % 1000;
+
+    t = std::chrono::system_clock::to_time_t(n);
+    cout << std::put_time(std::localtime(&t), "%Y-%m-%d %H.%M.%S") << "." << msecs << endl;
 
 }

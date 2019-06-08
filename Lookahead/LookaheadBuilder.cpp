@@ -28,7 +28,7 @@ void LookaheadBuilder::_compute_structure() {
     lookahead->acting_player.push_back(0);
     for (int d=1; d<lookahead->depth+1; ++d) {
         lookahead->acting_player_tensor[d] = 1 - lookahead->acting_player_tensor[d - 1];
-        lookahead->acting_player.push_back(1 - lookahead->acting_player[-1]);
+        lookahead->acting_player.push_back(1 - lookahead->acting_player[d - 1]);
     }
     lookahead->bets_count[-2] = 1;
     lookahead->bets_count[-1] = 1;
@@ -238,12 +238,14 @@ void LookaheadBuilder::construct_data_structures() {
 
 void LookaheadBuilder::set_datastructures_from_tree_dfs(Node& node, const int layer, const int action_id, const int parent_id,
                                                         const int gp_id, const int cur_action_id, const int parent_action_id) {
+
+//    std::cout << layer << ' ' << action_id << ' ' << parent_id << ' ' << gp_id << ' ' << cur_action_id << ' ' << parent_action_id << std::endl;
     assert (node.pot > 0);
     if (lookahead->is_next) {
         for (int j=0; j<lookahead->river_count; ++j) {
             if (lookahead->idx_range_by_depth.find(layer) != lookahead->idx_range_by_depth.end() && j >= lookahead->idx_range_by_depth[layer])
                 continue;
-            lookahead->pot_size[layer][action_id][parent_id][gp_id][j] = *std::min_element(node.all_river_bets[j], node.all_river_bets[j]+1);
+            lookahead->pot_size[layer][action_id][parent_id][gp_id][j] = *std::min_element(node.all_river_bets[j], node.all_river_bets[j]+2);
         }
     }
     else
@@ -262,7 +264,7 @@ void LookaheadBuilder::set_datastructures_from_tree_dfs(Node& node, const int la
         int next_parent_id = action_id - prev_layer_terminal_actions_count;
         int next_gp_id = gp_id * gp_nonallinbets_count + parent_id;
 
-        if (!node.terminal && (node.current_player == constants.players.chance)) {
+        if (!node.terminal && (node.current_player != constants.players.chance)) {
 
             assert (parent_id <= lookahead->nonallinbets_count[layer - 2] - 1);
             bool node_with_empty_actions = node.children->size() < lookahead->actions_count[layer];
@@ -287,9 +289,12 @@ void LookaheadBuilder::set_datastructures_from_tree_dfs(Node& node, const int la
                                                      next_parent_id, next_gp_id, node.actions[node.children->size() - b - 1], cur_action_id);
 
                 if (existing_bets_count == 0)
-                    lookahead->empty_action_mask[layer + 1].slice(0, terminal_actions_count, -1, 1)[next_parent_id][next_gp_id] = 0;
+                    lookahead->empty_action_mask[layer + 1].slice(0, terminal_actions_count, max_size, 1).slice(
+                            1, next_parent_id, next_parent_id+1, 1).slice(2, next_gp_id, next_gp_id+1, 1) = 0;
                 else {
-                    lookahead->empty_action_mask[layer + 1].slice(0, terminal_actions_count, -existing_bets_count, 1)[next_parent_id][next_gp_id] = 0;
+                    lookahead->empty_action_mask[layer + 1].slice(
+                            0, terminal_actions_count, lookahead->empty_action_mask[layer + 1].sizes()[0]-existing_bets_count, 1).slice(
+                                    1, next_parent_id, next_parent_id+1, 1).slice(2, next_gp_id, next_gp_id+1, 1) = 0;
 
                     if (lookahead->is_next)
                         for (int j = 1; j < lookahead->river_count; ++j) {
@@ -351,7 +356,7 @@ void LookaheadBuilder::build_from_tree(Node& tree, const int _river_hand_abstrac
 
     set_datastructures_from_tree_dfs(tree, 0, 0, 0, 0, 0, -100);
 
-    if (tree.street == 3 && *std::max_element(tree.bets, tree.bets+1) < stack) {
+    if (tree.street == 3 && *std::max_element(tree.bets, tree.bets+2) < stack) {
         lookahead->river_count = tree.river_count;
         lookahead->river_lookahead = new Lookahead(true);
 
@@ -403,7 +408,7 @@ void LookaheadBuilder::_compute_tree_structures(std::vector<Node*>& current_laye
                 next_layer.push_back(&child);
     }
 
-    assert ((layer_actions_count == 0) == (!next_layer.empty()));
+    assert ((layer_actions_count == 0) == (next_layer.empty()));
     assert ((layer_actions_count == 0) == (current_depth == lookahead->depth));
 
     lookahead->bets_count[current_depth] = layer_actions_count - layer_terminal_actions_count;
@@ -423,4 +428,3 @@ void LookaheadBuilder::_compute_tree_structures(std::vector<Node*>& current_laye
         _compute_tree_structures(next_layer, current_depth + 1);
     }
 }
-

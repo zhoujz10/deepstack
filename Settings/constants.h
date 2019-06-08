@@ -14,7 +14,7 @@
 //static const c10::Device device = c10::Device(c10::DeviceType::CUDA);
 static const c10::Device device = c10::Device(c10::DeviceType::CPU);
 
-static const char *hand_collide_file = "data/hand_collide.npy";
+static const char *hand_collide_file = "data/hand_collide.bin";
 
 static const char *flop_equity_matrix_dir = "data/equity_matrix_flop/";
 
@@ -96,5 +96,7 @@ const float pot_fractions_by_street[5][2][3] = {
 };
 
 const float max_number = 9999999999;
+
+const int max_size = 999;
 
 #endif //DEEPSTACK_CPP_CONSTANTS_H
