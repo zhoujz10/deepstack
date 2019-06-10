@@ -6,8 +6,12 @@
 #define DEEPSTACK_CPP_VALUE_NN_H
 
 
+#include <torch/torch.h>
+
 class ValueNn {
 
+public:
+    void get_value(const torch::Tensor& inputs, torch::Tensor& outputs);
 };
 
 ValueNn& get_aux_nn();

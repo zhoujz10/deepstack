@@ -36,16 +36,36 @@ public:
     torch::Tensor board_indexes_scatter;
     torch::Tensor values_per_board;
     torch::Tensor aux_values_per_board;
+    torch::Tensor aux_next_round_inputs;
+    torch::Tensor aux_next_round_values;
+    torch::Tensor aux_next_round_extended_range;
+    torch::Tensor aux_next_round_serialized_range;
+    torch::Tensor aux_value_normalization;
+    torch::Tensor bucket_range;
+    torch::Tensor range_normalization_memory;
+    torch::Tensor counterfactual_value_memory;
+    torch::Tensor aux_range_normalization;
 
     torch::Tensor pot_sizes;
 
-    NextRoundValue(const int _street, ValueNn *src_value_nn, ValueNn *src_aux_nn = nullptr);
+    torch::Tensor next_round_inputs;
+    torch::Tensor next_round_values;
+    torch::Tensor next_round_extended_range;
+    torch::Tensor next_round_serialized_range;
+    torch::Tensor range_normalization;
+    torch::Tensor value_normalization;
+
+
+
+
+    NextRoundValue(int _street, ValueNn *src_value_nn, ValueNn *src_aux_nn = nullptr);
     void init_bucketing(Board* board_ptr = nullptr);
     void start_computation(torch::Tensor& src_pot_sizes);
     void get_value(torch::Tensor& ranges, torch::Tensor& values);
     void get_value_on_board(Board& board, torch::Tensor& values);
 
     void init_var();
+    void get_value_aux(torch::Tensor& ranges, torch::Tensor& values, int next_board_idx=-1);
 
 private:
 
@@ -59,8 +79,11 @@ private:
 
     void _hand_range_to_bucket_range(torch::Tensor& hand_range, torch::Tensor& bucket_range);
     void _bucket_value_to_hand_value(torch::Tensor& bucket_value, torch::Tensor& hand_value);
-    void _hand_range_to_bucket_range_on_board(const int board_idx, torch::Tensor& hand_range, torch::Tensor& bucket_range);
+    void _hand_range_to_bucket_range_on_board(int board_idx, torch::Tensor& hand_range, torch::Tensor& bucket_range);
     void _bucket_value_to_hand_value_on_board(Board& board, torch::Tensor& bucket_value, torch::Tensor& hand_value);
+    void _hand_range_to_bucket_range_aux(const torch::Tensor& hand_range, torch::Tensor& bucket_range);
+    void _bucket_value_to_hand_value_aux(const torch::Tensor& bucket_value, torch::Tensor& hand_value);
+
     void _prepare_next_round_values();
 };
 

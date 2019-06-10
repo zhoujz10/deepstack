@@ -89,15 +89,15 @@ void NextRoundValue::init_bucketing(Board *board_ptr) {
     }
 }
 
-void NextRoundValue::_hand_range_to_bucket_range(torch::Tensor& hand_range, torch::Tensor& bucket_range) {
+void NextRoundValue::_hand_range_to_bucket_range(torch::Tensor& hand_range, torch::Tensor& _bucket_range) {
     if (street == 1) {
-        torch::Tensor other_bucket_range = bucket_range.view({-1, board_count, bucket_count + 1});
+        torch::Tensor other_bucket_range = _bucket_range.view({-1, board_count, bucket_count + 1});
         other_bucket_range.zero_();
         torch::Tensor indexes = board_indexes_scatter.view({1, board_count, hand_count}).expand({bucket_range.sizes()[0], -1, -1});
         other_bucket_range.scatter_add_(2, indexes, hand_range.view({-1, 1, hand_count}).expand({hand_range.sizes()[0], board_count, -1}));
     }
     else
-        bucket_range.copy_(torch::matmul(hand_range, _range_matrix));
+        _bucket_range.copy_(torch::matmul(hand_range, _range_matrix));
 }
 
 void NextRoundValue::_bucket_value_to_hand_value(torch::Tensor& bucket_value, torch::Tensor& hand_value) {
@@ -113,11 +113,11 @@ void NextRoundValue::_bucket_value_to_hand_value(torch::Tensor& bucket_value, to
         hand_value.copy_(torch::matmul(bucket_value, _reverse_value_matrix));
 }
 
-void NextRoundValue::_hand_range_to_bucket_range_on_board(const int board_idx, torch::Tensor& hand_range, torch::Tensor& bucket_range) {
-    torch::Tensor other_bucket_range = bucket_range.view({-1, bucket_count + 1});
+void NextRoundValue::_hand_range_to_bucket_range_on_board(const int board_idx, torch::Tensor& hand_range, torch::Tensor& _bucket_range) {
+    torch::Tensor other_bucket_range = _bucket_range.view({-1, bucket_count + 1});
     other_bucket_range.zero_();
     torch::Tensor indexes = board_indexes_scatter.view({1, board_count, hand_count}).slice(
-            1, board_idx, board_idx+1, 1).squeeze().expand({bucket_range.sizes()[0], -1});
+            1, board_idx, board_idx+1, 1).squeeze().expand({_bucket_range.sizes()[0], -1});
     other_bucket_range.scatter_add_(1, indexes, hand_range.view({-1, hand_count}).expand({hand_range.sizes()[0], -1}));
 }
 
@@ -141,6 +141,14 @@ void NextRoundValue::_bucket_value_to_hand_value_on_board(Board& board, torch::T
     }
 }
 
+void NextRoundValue::_hand_range_to_bucket_range_aux(const torch::Tensor& hand_range, torch::Tensor& _bucket_range) {
+    _bucket_range.copy_(torch::matmul(hand_range, _aux_range_matrix));
+}
+
+void NextRoundValue::_bucket_value_to_hand_value_aux(const torch::Tensor& bucket_value, torch::Tensor& hand_value) {
+    hand_value.copy_(torch::matmul(bucket_value, _aux_reverse_value_matrix));
+}
+
 void NextRoundValue::start_computation(torch::Tensor& src_pot_sizes) {
     iter = -1;
     pot_sizes = src_pot_sizes.view({-1, 1}).clone();
@@ -149,10 +157,108 @@ void NextRoundValue::start_computation(torch::Tensor& src_pot_sizes) {
 }
 
 void NextRoundValue::init_var() {
-
+    aux_next_round_inputs.zero_();
+    aux_next_round_values.zero_();
+    aux_next_round_extended_range.zero_();
+    aux_next_round_serialized_range.zero_();
+    aux_values_per_board.zero_();
+    aux_value_normalization.zero_();
+    aux_next_round_inputs.slice(1, aux_bucket_count * constants.players_count, max_size, 1).copy_(pot_sizes.view(-1) / stack);
 }
 
+void NextRoundValue::get_value_aux(torch::Tensor& ranges, torch::Tensor& values, const int next_board_idx) {
+    assert (ranges.sizes()[0] == batch_size);
 
+    iter ++;
+    if (iter == 0) {
+//        initializing data structures
+        aux_next_round_inputs = torch::zeros({batch_size, (aux_bucket_count * constants.players_count + 1)}, torch::kFloat32).to(device);
+        aux_next_round_values = torch::zeros({batch_size, constants.players_count, aux_bucket_count}, torch::kFloat32).to(device);
+        aux_next_round_extended_range = torch::zeros({batch_size, constants.players_count, aux_bucket_count}, torch::kFloat32).to(device);
+        aux_next_round_serialized_range = aux_next_round_extended_range.view({-1, aux_bucket_count});
+        aux_values_per_board = torch::zeros({batch_size * constants.players_count, hand_count}, torch::kFloat32).to(device);
+        aux_value_normalization = torch::zeros({batch_size, constants.players_count}, torch::kFloat32).to(device);
+//        handling pot feature for the nn
+        aux_next_round_inputs.slice(1, aux_bucket_count * constants.players_count, max_size, 1).copy_(pot_sizes.view(-1) / stack);
+    }
+
+    bool use_memory = (iter >= cfr_skip_iters[street]) && next_board_idx > -1;
+
+    if (use_memory && (iter == cfr_skip_iters[street])) {
+//        first iter that we need to remember something - we need to init data structures
+        bucket_range = torch::zeros({batch_size * constants.players_count, bucket_count}, torch::kFloat32).to(device);
+        next_round_inputs = torch::zeros({batch_size, (bucket_count * constants.players_count + 1)}, torch::kFloat32).to(device);
+        next_round_values = torch::zeros({batch_size, constants.players_count, bucket_count}, torch::kFloat32).to(device);
+        next_round_extended_range = torch::zeros({batch_size, constants.players_count, bucket_count+1}, torch::kFloat32).to(device);
+        next_round_serialized_range = next_round_extended_range.view({-1, bucket_count+1});
+
+        value_normalization = torch::zeros({batch_size, constants.players_count}, torch::kFloat32).to(device);
+
+        range_normalization_memory = torch::zeros({batch_size * constants.players_count, 1}, torch::kFloat32).to(device);
+        counterfactual_value_memory = torch::zeros({batch_size, constants.players_count, bucket_count}, torch::kFloat32).to(device);
+
+        next_round_inputs.slice(1, aux_bucket_count * constants.players_count, max_size, 1).copy_(
+                aux_next_round_inputs.slice(1, aux_bucket_count * constants.players_count, max_size, 1));
+    }
+
+    torch::Tensor _ranges = ranges.view({batch_size * constants.players_count, -1});
+    torch::Tensor _aux_next_round_extended_range = aux_next_round_extended_range.view({batch_size * constants.players_count, -1});
+
+    _hand_range_to_bucket_range_aux(_ranges, _aux_next_round_extended_range);
+    aux_range_normalization = aux_next_round_serialized_range.sum(1);
+    torch::Tensor rn_view = aux_range_normalization.view({batch_size, constants.players_count});
+    for (int player=0; player<constants.players_count; ++player)
+        aux_value_normalization.slice(1, player, player+1, 1).copy_(rn_view.slice(1, 1-player, 2-player, 1));
+
+    if (use_memory) {
+        torch::Tensor _next_round_extended_range = next_round_extended_range.view({batch_size * constants.players_count, -1});
+        _hand_range_to_bucket_range_on_board(next_board_idx, _ranges, _next_round_extended_range);
+        range_normalization = next_round_serialized_range.slice(1, 0, bucket_count+1, 1).sum(1);
+        torch::Tensor rnb_view = range_normalization.view({batch_size, constants.players_count});
+        for (int player=0; player<constants.players_count; ++player)
+            value_normalization.slice(1, player, player+1, 1).copy_(rnb_view.slice(1, 1-player, 2-player, 1));
+        range_normalization_memory += value_normalization.view(range_normalization_memory.sizes());
+    }
+
+    aux_range_normalization.masked_fill_(aux_range_normalization.eq(0), 1);
+    aux_next_round_serialized_range /= aux_range_normalization.view({-1, 1}).expand_as(aux_next_round_serialized_range);
+
+    for (int player=0; player<constants.players_count; ++player) {
+        torch::Tensor aux_next_round_inputs_slice = aux_next_round_inputs.slice(1, player * aux_bucket_count, (player + 1) * aux_bucket_count, 1);
+        aux_next_round_inputs_slice.copy_(aux_next_round_extended_range.slice(1, player, player + 1, 1).slice(
+                2, 0, aux_bucket_count, 1).view(aux_next_round_inputs_slice.sizes()));
+    }
+
+    torch::Tensor aux_serialized_inputs_view = aux_next_round_inputs.view({batch_size, -1});
+    torch::Tensor aux_serialized_values_view = aux_next_round_values.view({batch_size, -1});
+
+    if (use_memory) {
+        range_normalization.masked_fill_(range_normalization.eq(0), 1);
+        next_round_serialized_range /= range_normalization.view({range_normalization.sizes()[0], 1}).expand_as(next_round_serialized_range);
+        for (int player=0; player<constants.players_count; ++player)
+            next_round_inputs.slice(1, player*bucket_count, (player+1)*bucket_count, 1) = next_round_extended_range.slice(
+                    1, player, player+1, 1).slice(2, 0, bucket_count, 1).squeeze();
+
+        torch::Tensor serialized_inputs_view = next_round_inputs.view({batch_size, -1});
+        torch::Tensor serialized_values_view = next_round_values.view({batch_size, -1});
+
+        value_nn->get_value(serialized_inputs_view, serialized_values_view);
+    }
+
+    torch::Tensor aux_normalization_view = aux_value_normalization.view({batch_size, constants.players_count, 1});
+    aux_next_round_values *= aux_normalization_view.expand_as(aux_next_round_values);
+
+    if (use_memory) {
+        torch::Tensor normalization_view = value_normalization.view({batch_size, constants.players_count, 1});
+        next_round_values *= normalization_view.expand_as(next_round_values);
+        counterfactual_value_memory += next_round_values;
+    }
+
+    torch::Tensor _aux_next_round_values = aux_next_round_values.view({batch_size * constants.players_count, -1});
+    torch::Tensor _values = values.view({batch_size * constants.players_count, -1});
+
+    _bucket_value_to_hand_value_aux(_aux_next_round_values, _values);
+}
 
 
 
