@@ -17,12 +17,15 @@ void PokerTreeBuilder::_fill_additional_attributes(Node& node) {
     node.pot = *std::min_element(node.bets, node.bets+2);
 }
 
-std::vector<Node>* PokerTreeBuilder::_get_children_player_node(Node &parent_node, int depth) {
+//std::vector<Node>* PokerTreeBuilder::_get_children_player_node(Node &parent_node, int depth) {
+void PokerTreeBuilder::_get_children_player_node(Node &parent_node, int depth) {
 
-    auto children = new std::vector<Node>;
+    parent_node.children = new std::vector<Node>;
+    auto children = parent_node.children;
 
 //    fold action
     Node fold_node;
+//    auto fold_node = *new Node;
     fold_node.node_type = constants.node_types.terminal_fold;
     fold_node.terminal = true;
     fold_node.current_player = 1 - parent_node.current_player;
@@ -42,6 +45,7 @@ std::vector<Node>* PokerTreeBuilder::_get_children_player_node(Node &parent_node
         (parent_node.current_player == constants.players.P2 && (parent_node.bets[0] == ante) &&
          (parent_node.bets[1] == ante / 2 ) && parent_node.street == 1)) {
         Node check_node;
+//        auto check_node = *new Node;
         check_node.node_type = constants.node_types.check;
         check_node.terminal = false;
         check_node.current_player = 1 - parent_node.current_player;
@@ -61,6 +65,8 @@ std::vector<Node>* PokerTreeBuilder::_get_children_player_node(Node &parent_node
               (parent_node.bets[0] != parent_node.bets[1] && *std::max_element(parent_node.bets, parent_node.bets+2) < stack))
             ) {
         Node chance_node;
+//        auto chance_node = *new Node;
+
         chance_node.terminal = false;
         chance_node.node_type = constants.node_types.chance_node;
         chance_node.street = parent_node.street;
@@ -71,7 +77,8 @@ std::vector<Node>* PokerTreeBuilder::_get_children_player_node(Node &parent_node
         if (root->street == 3) {
 
             chance_node.is_next_street_root = true;
-            int i = *std::find(root->river_pots, root->river_pots+19, chance_node.bets[0]);
+            int i = std::find(root->river_pots, root->river_pots+19, chance_node.bets[0]) - root->river_pots;
+//            std::cout << chance_node.bets[0] << ' ' << i << std::endl;
             if (used_pot[i])
                 chance_node.river_idx = i + 1;
             else {
@@ -79,17 +86,23 @@ std::vector<Node>* PokerTreeBuilder::_get_children_player_node(Node &parent_node
                 used_pot[i] = true;
             }
             int pot = chance_node.bets[0];
+            children->push_back(chance_node);
             if (pot == *std::min_element(root->river_pots, root->river_pots+river_count))
-                root->river_tree_node = &chance_node;
+//                root->river_tree_node = &children->back();
+                root->river_tree_node = new Node(chance_node);
         }
-        else
+        else {
             chance_node.is_next_street_root = false;
+            children->push_back(chance_node);
+        }
 
-        children->push_back(chance_node);
+//        children->push_back(chance_node);
+
     }
     else {
 //        terminal call - either last street or allin
         Node terminal_call_node;
+//        auto terminal_call_node = *new Node;
         terminal_call_node.node_type = constants.node_types.terminal_call;
         terminal_call_node.terminal = true;
         terminal_call_node.current_player = 1 - parent_node.current_player;
@@ -117,6 +130,7 @@ std::vector<Node>* PokerTreeBuilder::_get_children_player_node(Node &parent_node
     if (!possible_bets.empty()) {
         for (int i=0; i<possible_bets.size(); ++i) {
             Node child;
+//            auto child = *new Node;
             child.terminal = false;
             child.node_type = constants.node_types.inner_node;
             child.parent = &parent_node;
@@ -154,31 +168,40 @@ std::vector<Node>* PokerTreeBuilder::_get_children_player_node(Node &parent_node
             children->push_back(child);
         }
     }
-    return children;
+//    return children;
 }
 
-std::vector<Node>* PokerTreeBuilder::_get_children_nodes(Node &parent_node, int depth) {
+//std::vector<Node>* PokerTreeBuilder::_get_children_nodes(Node &parent_node, int depth) {
+void PokerTreeBuilder::_get_children_nodes(Node &parent_node, int depth) {
 
     bool chance_node = (parent_node.current_player == constants.players.chance);
 //    transition call -> create a chance node
     if (parent_node.terminal)
-        return new std::vector<Node>;
+        parent_node.children = new std::vector<Node>;
+//        return new std::vector<Node>;
 //    chance node
     else if (chance_node)
-        return new std::vector<Node>;
+        parent_node.children = new std::vector<Node>;
+//        return new std::vector<Node>;
 //    inner nodes -> handle bet sizes
     else
-        return _get_children_player_node(parent_node, depth);
+        _get_children_player_node(parent_node, depth);
+//        return _get_children_player_node(parent_node, depth);
 }
 
 void PokerTreeBuilder::_build_tree_dfs(Node &current_node, int depth) {
     _fill_additional_attributes(current_node);
-    auto children = _get_children_nodes(current_node, depth);
-    current_node.children = children;
+//    auto children = _get_children_nodes(current_node, depth);
+//    current_node.children = children;
+
+    _get_children_nodes(current_node, depth);
+    auto children = current_node.children;
+
 
     int _depth = -1;
 
     current_node.actions = new int[children->size()];
+//    std::cout << children->size() << std::endl;
     for (int i=0; i<children->size(); ++i) {
         (*children)[i].parent = &current_node;
         _build_tree_dfs((*children)[i], depth+1);
@@ -196,6 +219,7 @@ void PokerTreeBuilder::_build_tree_dfs(Node &current_node, int depth) {
 }
 
 Node* PokerTreeBuilder::build_tree(Node& build_tree_node) {
+
     auto root_node = new Node(build_tree_node);
 
     root = root_node;
@@ -231,11 +255,16 @@ Node* PokerTreeBuilder::build_tree(Node& build_tree_node) {
     _build_tree_dfs(*root, 0);
 
     if (root->street == 3 && root->river_count > 0) {
-        Node next_street_node(root->river_tree_node->board);
+        auto next_street_node = *new Node(root->river_tree_node->board);
+        next_street_node.board.cards[4] = 0;
+        next_street_node.street = 4;
         next_street_node.current_player = constants.players.P1;
         memcpy(next_street_node.bets, root->river_tree_node->bets, 2 * sizeof(int));
 
+//        auto t = new int[20];
+//        memcpy(t, river_pots_fractions_05, 20*sizeof(int));
         auto tree_builder = new PokerTreeBuilder(true, river_count, root->river_pots);
+//        auto tree_builder = new PokerTreeBuilder(true, river_count, t);
         auto next_street_root = tree_builder->build_tree(next_street_node);
         root->river_tree_node->next_street_root = next_street_root;
     }

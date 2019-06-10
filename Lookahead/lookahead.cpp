@@ -34,6 +34,7 @@ void Lookahead::resolve(torch::Tensor& player_range, torch::Tensor& opponent_cfv
 }
 
 void Lookahead::_compute() {
+    std::cout << "start computing..." << std::endl;
     for (int _iter=0; _iter<cfr_iters[tree->street]; ++_iter) {
         _set_opponent_starting_range(_iter);
         _compute_current_strategies();
@@ -67,9 +68,13 @@ void Lookahead::_compute_current_strategies_next_street() {
 
         positive_regrets_data[d] *= empty_action_mask[d];
 
-        regrets_sum[d].slice(4, 0, 1, 1).copy_(positive_regrets_data[d].sum(0));
-        current_strategy_data[d].copy_(positive_regrets_data[d] / regrets_sum[d].slice(4, 0, 1, 1).expand_as(positive_regrets_data[d]));
+        regrets_sum[d].slice(4, 0, 1, 1).copy_(positive_regrets_data[d].sum(0).unsqueeze(4));
+        current_strategy_data[d].copy_(positive_regrets_data[d] / regrets_sum[d].slice(4, 0, 1, 1).squeeze(4).expand_as(positive_regrets_data[d]));
     }
+//    print(empty_action_mask[1].slice(4, 0, 1, 1).slice(5, 0, 1, 1).squeeze());
+//    print(current_strategy_data[1].slice(4, 0, 1, 1).slice(5, 0, 1, 1).squeeze());
+//    print(current_strategy_data[2].slice(4, 0, 1, 1).slice(5, 0, 1, 1).squeeze(5).squeeze(4).squeeze(3));
+//    exit(0);
 }
 
 void Lookahead::_compute_ranges() {
@@ -90,6 +95,7 @@ void Lookahead::_compute_ranges() {
     }
 
     if (tree->street == 3 && *std::max_element(tree->bets, tree->bets+2) < stack) {
+
         for (auto& t : next_street_lookahead) {
             auto layer = std::get<0>(t);
             auto action_id = std::get<1>(t);
@@ -97,23 +103,26 @@ void Lookahead::_compute_ranges() {
             auto gp_id = std::get<3>(t);
             auto i = std::get<4>(t);
 
-            torch::Tensor rd_slice = ranges_data[layer].slice(0, action_id, action_id+1, 1)
-                    .slice(1, parent_id, parent_id+1, 1).slice(2, gp_id, gp_id+1, 1);
-            river_lookahead->ranges_convert[i].copy_(torch::bmm(rd_slice.view({1,2,hand_count}).expand({boards_count[4],-1,-1}), terminal_equity.river_hand_abstract));
+            torch::Tensor rd_slice = ranges_data[layer][action_id][parent_id][gp_id];
+            river_lookahead->ranges_convert[i].copy_(
+                    torch::bmm(rd_slice.expand({boards_count[4], -1, -1}), terminal_equity.river_hand_abstract));
             river_lookahead->ranges_data_hand[i].copy_(rd_slice.expand_as(river_lookahead->ranges_data_hand[i]));
+//            print(river_lookahead->ranges_data_hand[0]);
+//            exit(0);
 
-            river_lookahead->ranges_data_hand[i].masked_fill_(terminal_equity.mask_next_street, 0);
-
-            if (tree->current_player == 0)
-                river_lookahead->ranges_data[0].slice(0, 0, 1, 1).slice(1, 0, 1, 1).slice(2, 0, 1, 1).copy_(river_lookahead->ranges_convert);
-            else {
-                river_lookahead->ranges_data[0].slice(0, 0, 1, 1).slice(1, 0, 1, 1).slice(2, 0, 1, 1).slice(5, 0, 1, 1).copy_(
-                        river_lookahead->ranges_convert.slice(2, 1, max_size, 1));
-                river_lookahead->ranges_data[0].slice(0, 0, 1, 1).slice(1, 0, 1, 1).slice(2, 0, 1, 1).slice(5, 1, max_size, 1).copy_(
-                        river_lookahead->ranges_convert.slice(2, 0, 1, 1));
-            }
-            river_lookahead->_compute_ranges_next_street();
+            river_lookahead->ranges_data_hand[i].squeeze().masked_fill_(terminal_equity.mask_next_street, 0);
         }
+
+        if (tree->current_player == 0)
+            river_lookahead->ranges_data[0][0][0][0].copy_(river_lookahead->ranges_convert);
+        else {
+            river_lookahead->ranges_data[0][0][0][0].slice(2, 0, 1, 1).copy_(
+                    river_lookahead->ranges_convert.slice(2, 1, max_size, 1));
+            river_lookahead->ranges_data[0][0][0][0].slice(2, 1, max_size, 1).copy_(
+                    river_lookahead->ranges_convert.slice(2, 0, 1, 1));
+        }
+
+        river_lookahead->_compute_ranges_next_street();
     }
 }
 
@@ -126,7 +135,8 @@ void Lookahead::_compute_ranges_next_street() {
         int prev_layer_bets_count = bets_count[d-1];
         int gp_layer_nonallin_bets_count = nonallinbets_count[d-2];
 
-        inner_nodes[d].copy_(current_level_ranges.slice(0, prev_layer_terminal_actions_count, max_size, 1).slice(1, 0, gp_layer_nonallin_bets_count, 1));
+        inner_nodes[d].copy_(current_level_ranges.slice(
+                0, prev_layer_terminal_actions_count, max_size, 1).slice(1, 0, gp_layer_nonallin_bets_count, 1).squeeze(0));
         torch::Tensor super_view;
         if (idx_range_by_depth.find(d) != idx_range_by_depth.end())
             super_view = inner_nodes[d].transpose(1,2).view({1, prev_layer_bets_count, -1, idx_range_by_depth[d],
@@ -140,8 +150,15 @@ void Lookahead::_compute_ranges_next_street() {
         else
             next_level_ranges.copy_(super_view.expand_as(next_level_ranges));
 
-        next_level_ranges.slice(5, acting_player[d], acting_player[d]+1, 1) *= current_strategy_data[d+1];
+//        print(ranges_data[1].slice(6, 0, 1, 1).slice(5, 0, 1, 1).slice(4, 0, 1, 1).squeeze());
+//        print(current_strategy_data[1].slice(5, 0, 1, 1).slice(4, 0, 1, 1).squeeze());
+        next_level_ranges.slice(5, acting_player[d], acting_player[d]+1, 1).squeeze(5) *= current_strategy_data[d+1];
+//        print(ranges_data[1].slice(6, 0, 1, 1).slice(5, 0, 1, 1).slice(4, 0, 1, 1).squeeze());
+//        exit(0);
     }
+//    print(ranges_data[3].slice(6, 0, 1, 1).slice(5, 0, 1, 1).slice(4, 0, 1, 1).squeeze());
+//    print(ranges_data[2].slice(6, 0, 1, 1).slice(5, 1, 2, 1).slice(4, 0, 1, 1).squeeze());
+//    exit(0);
 }
 
 void Lookahead::_compute_update_average_strategies(const int _iter) {
@@ -171,7 +188,8 @@ void Lookahead::_compute_terminal_equities_terminal_equity() {
         if (d>1 or first_call_terminal) {
             if (tree->street != 4)
                 cfvs_data[d][1].slice(0, cfvs_data[d].sizes()[1]-1, cfvs_data[d].sizes()[1], 1).copy_(
-                        cfvs_data_call.slice(0, term_call_indices[d].first*2, term_call_indices[d].second*2, 1));
+                        cfvs_data_call.slice(0, term_call_indices[d].first*2, term_call_indices[d].second*2, 1).view(
+                                cfvs_data[d][1].slice(0, cfvs_data[d].sizes()[1]-1, cfvs_data[d].sizes()[1], 1).sizes()));
             else
                 cfvs_data[d][1].copy_(cfvs_data_call.slice(
                         0, term_call_indices[d].first*2, term_call_indices[d].second*2, 1).view(cfvs_data[d][1].sizes()));
@@ -188,18 +206,22 @@ void Lookahead::_compute_terminal_equities_terminal_equity() {
 void Lookahead::_compute_terminal_equities_terminal_equity_next_street() {
     for (int d=1; d<depth+1; ++d) {
         if (d>1 or first_call_terminal) {
-            torch::Tensor _ranges_data = ranges_data[d].slice(0, 1, 2, 1).view({-1, terminal_equity.river_hand_abstract_count});
-            torch::Tensor _cfvs_data = cfvs_data[d].slice(0, 1, 2, 1).view({-1, terminal_equity.river_hand_abstract_count});
+            torch::Tensor _ranges_data = ranges_data[d][1].view({-1, terminal_equity.river_hand_abstract_count});
+            torch::Tensor _cfvs_data = cfvs_data[d][1].view({-1, terminal_equity.river_hand_abstract_count});
             terminal_equity.call_value_next_street(_ranges_data, _cfvs_data);
 
             int fold_mutliplier = acting_player[d]*2 - 1;
-            _ranges_data = ranges_data[d].slice(0, 0, 1, 1).view({-1, terminal_equity.river_hand_abstract_count});
-            _cfvs_data = cfvs_data[d].slice(0, 0, 1, 1).view({-1, terminal_equity.river_hand_abstract_count});
+            _ranges_data = ranges_data[d][0].view({-1, terminal_equity.river_hand_abstract_count});
+            _cfvs_data = cfvs_data[d][0].view({-1, terminal_equity.river_hand_abstract_count});
             terminal_equity.fold_value_next_street(_ranges_data, _cfvs_data);
-            cfvs_data[d].slice(0, 0, 1, 1).slice(5, 0, 1, 1) *= fold_mutliplier;
-            cfvs_data[d].slice(0, 0, 1, 1).slice(0, 1, max_size, 1) *= -fold_mutliplier;
+            cfvs_data[d][0].slice(4, 0, 1, 1) *= fold_mutliplier;
+            cfvs_data[d][0].slice(4, 1, max_size, 1) *= -fold_mutliplier;
         }
     }
+//    print(ranges_data[2].slice(4, 0, 1, 1).slice(5, 0, 1, 1).slice(6, 0, 1, 1).squeeze());
+//    exit(0);
+//    print(cfvs_data[3][0].slice(5, 0, 1, 1).slice(4, 0, 1, 1).slice(3, 0, 1, 1).squeeze());
+//    exit(0);
 }
 
 void Lookahead::_compute_terminal_equities_next_street_box(const int _iter) {
@@ -219,18 +241,14 @@ void Lookahead::_compute_terminal_equities_next_street_resolve(const int _iter) 
         auto i = std::get<4>(t);
         auto pot = std::get<5>(t);
 
-        river_lookahead->cfvs_data_hand.slice(0, i, i+1, 1).copy_(
-                torch::bmm(river_lookahead->cfvs_data[0].slice(0, 0, 1, 1).slice(1, 0, 1, 1).slice(2, 0, 1, 1).slice(3, i, i+1, 1),
-                        terminal_equity.river_hand_abstract.transpose(1,2)));
+        river_lookahead->cfvs_data_hand[i].copy_(
+                torch::bmm(river_lookahead->cfvs_data[0][0][0][0][i], terminal_equity.river_hand_abstract.transpose(1,2)));
         if (tree->current_player == 0)
-            cfvs_data[layer].slice(0, action_id, action_id+1, 1).slice(1, parent_id, parent_id+1, 1).slice(2, gp_id, gp_id+1, 1).copy_(
-                    river_lookahead->cfvs_data_hand.slice(0, i, i+1, 1).sum(0) / pot / 44);
+            cfvs_data[layer][action_id][parent_id][gp_id].copy_(river_lookahead->cfvs_data_hand[i].sum(0) / pot / 44);
         else {
-            torch::Tensor cfvs_data_hand_sum = river_lookahead->cfvs_data_hand.slice(0, i, i+1, 1).sum(0);
-            cfvs_data[layer].slice(0, action_id, action_id+1, 1).slice(1, parent_id, parent_id+1, 1).slice(
-                    2, gp_id, gp_id+1, 1).slice(3, 0, 1, 1).copy_(cfvs_data_hand_sum.slice(0, 1, max_size, 1) / pot / 44);
-            cfvs_data[layer].slice(0, action_id, action_id+1, 1).slice(1, parent_id, parent_id+1, 1).slice(
-                    2, gp_id, gp_id+1, 1).slice(3, 1, max_size, 1).copy_(cfvs_data_hand_sum.slice(0, 0, 1, 1) / pot / 44);
+            torch::Tensor cfvs_data_hand_sum = river_lookahead->cfvs_data_hand[i].sum(0);
+            cfvs_data[layer][action_id][parent_id][gp_id][0].copy_(cfvs_data_hand_sum[1] / pot / 44);
+            cfvs_data[layer][action_id][parent_id][gp_id][1].copy_(cfvs_data_hand_sum[0] / pot / 44);
         }
         if (_iter >= cfr_skip_iters[3]) {
             river_lookahead->ranges_data_hand_memory += river_lookahead->ranges_data_hand;
@@ -281,11 +299,12 @@ void Lookahead::_compute_cfvs_next_street() {
     for (int d=depth; d>0; --d) {
         int gp_layer_terminal_actions_count = terminal_actions_count[d-2];
         int ggp_layer_nonallin_bets_count = nonallinbets_count[d-3];
-        cfvs_data[d].slice(5, 0, 1, 1) *= empty_action_mask[d];
-        cfvs_data[d].slice(5, 1, max_size, 1) *= empty_action_mask[d];
+
+        cfvs_data[d].slice(5, 0, 1, 1) *= empty_action_mask[d].unsqueeze(5);
+        cfvs_data[d].slice(5, 1, max_size, 1) *= empty_action_mask[d].unsqueeze(5);
         placeholder_data[d].copy_(cfvs_data[d]);
 
-        placeholder_data[d].slice(5, acting_player[d], acting_player[d]+1, 1) *= current_strategy_data[d];
+        placeholder_data[d].slice(5, acting_player[d], acting_player[d]+1, 1) *= current_strategy_data[d].unsqueeze(5);
         regrets_sum[d].copy_(placeholder_data[d].sum(0));
 
         if (idx_range_by_depth.find(d) != idx_range_by_depth.end()) {
@@ -317,7 +336,7 @@ void Lookahead::_compute_normalize_average_strategies() {
     player_avg_strategy /= tmp;
 
     player_avg_strategy.masked_fill_(tmp.eq(0), 0);
-    player_avg_strategy.slice(0, 0, 1, 1).masked_fill_(tmp.slice(0, 0, 1, 1).eq(0), 1);
+    player_avg_strategy[0].masked_fill_(tmp[0].eq(0), 1);
 }
 
 void Lookahead::_compute_normalize_average_cfvs() {
@@ -355,13 +374,13 @@ void Lookahead::_compute_regrets_next_street() {
         int ggp_layer_nonallin_bets_count = nonallinbets_count[d-3];
 
         torch::Tensor current_regrets = current_regrets_data[d];
-        current_regrets.copy_(cfvs_data[d].slice(5, acting_player[d], acting_player[d]+1, 1));
+        current_regrets.copy_(cfvs_data[d].slice(5, acting_player[d], acting_player[d]+1, 1).squeeze(5));
 
         torch::Tensor next_level_cfvs = cfvs_data[d-1];
 
         torch::Tensor parent_inner_nodes = inner_nodes_p1[d-1];
         parent_inner_nodes.copy_(next_level_cfvs.slice(0, gp_layer_terminal_actions_count, max_size, 1).slice(1, 0, ggp_layer_nonallin_bets_count, 1).slice(
-                5, acting_player[d], acting_player[d]+1, 1).transpose(1,2).view(parent_inner_nodes.sizes()));
+                5, acting_player[d], acting_player[d]+1, 1).squeeze(5).transpose(1,2).view(parent_inner_nodes.sizes()));
         if (idx_range_by_depth.find(d-1) != idx_range_by_depth.end())
             parent_inner_nodes = parent_inner_nodes.view({1, gp_layer_bets_count, -1, idx_range_by_depth[d-1], boards_count[4], terminal_equity.river_hand_abstract_count});
         else
@@ -379,16 +398,16 @@ void Lookahead::get_results(std::map<std::string, torch::Tensor> &out) {
 
     out["strategy"] = average_strategies_data[1].view({-1, hand_count}).clone();
 
-    out["achieved_cfvs"] = average_cfvs_data[0].view({constants.players_count, hand_count}).slice(0, 0, 1, 1).clone();
+    out["achieved_cfvs"] = average_cfvs_data[0].view({constants.players_count, hand_count})[0].clone();
 
 //    if self.reconstruction_opponent_cfvs is not None:
 //    out['root_cfvs'] = None
 //    else:
-    out["root_cfvs"] = average_cfvs_data[0].view({constants.players_count, hand_count}).slice(0, 1, max_size, 1).clone();
+    out["root_cfvs"] = average_cfvs_data[0].view({constants.players_count, hand_count})[1].clone();
 
     out["root_cfvs_both_players"] = average_cfvs_data[0].view({constants.players_count, hand_count}).clone();
-    out["root_cfvs_both_players"].slice(0, 1, max_size, 1) = average_cfvs_data[0].view({constants.players_count, hand_count}).slice(0, 0, 1, 1);
-    out["root_cfvs_both_players"].slice(0, 0, 1, 1) = average_cfvs_data[0].view({constants.players_count, hand_count}).slice(0, 1, max_size, 1);
+    out["root_cfvs_both_players"][1].copy_(average_cfvs_data[0].view({constants.players_count, hand_count})[0]);
+    out["root_cfvs_both_players"][0].copy_(average_cfvs_data[0].view({constants.players_count, hand_count})[1]);
 
     out["children_cfvs"] = average_cfvs_data[1].slice(3, 0, 1, 1).view({-1, hand_count}).clone();
 
@@ -406,22 +425,4 @@ void Lookahead::get_results(std::map<std::string, torch::Tensor> &out) {
 void Lookahead::_set_opponent_starting_range(const int _iter) {
 
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

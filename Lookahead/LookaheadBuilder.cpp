@@ -17,7 +17,60 @@ void LookaheadBuilder::_construct_transition_boxes() {
     if (lookahead->tree->street >= 3)
         return;
     lookahead->num_pot_sizes = 0;
-//    TODO: finish this function
+
+    for (int d=1; d<lookahead->depth+1; ++d) {
+        int before = lookahead->num_pot_sizes;
+        if (d == 1 and lookahead->first_call_transition) {
+            lookahead->num_pot_sizes += 1;
+            lookahead->indices[d] = std::pair<int, int>(before, lookahead->num_pot_sizes);
+        }
+        else if (lookahead->pot_size[d][1].sizes()[0] > 1) {
+            lookahead->num_pot_sizes += (lookahead->pot_size[d].sizes()[1] - 1) * lookahead->pot_size[d].sizes()[2];
+            lookahead->indices[d] = std::pair<int, int>(before, lookahead->num_pot_sizes);
+        }
+    }
+
+    if (lookahead->num_pot_sizes == 0)
+        return;
+
+    lookahead->next_street_boxes_inputs = torch::zeros({lookahead->num_pot_sizes, constants.players_count, hand_count}, torch::kFloat32).to(device);
+    lookahead->next_street_boxes_outputs = lookahead->next_street_boxes_inputs.clone();
+    if (lookahead->tree->street == 1)
+        lookahead->next_street_boxes_inputs_memory = torch::zeros(
+                {cfr_iters[1] - cfr_skip_iters[1], lookahead->num_pot_sizes, constants.players_count, hand_count}, torch::kFloat32).to(device);
+    lookahead->next_round_pot_sizes = torch::zeros(lookahead->num_pot_sizes, torch::kFloat32).to(device);
+
+    for (int d=1; d<lookahead->depth+1; ++d) {
+        auto parent_indices = std::pair<int, int>(0, -1);
+        if (lookahead->indices.find(d) != lookahead->indices.end()) {
+            if (d==1)
+                parent_indices = std::pair<int, int>(0, 1);
+            lookahead->next_round_pot_sizes.slice(0, lookahead->indices[d].first, lookahead->indices[d].second, 1).copy_(
+                    lookahead->pot_size[d][1].slice(0, parent_indices.first, parent_indices.second, 1).slice(2, 0, 1, 1).slice(
+                            3, 0, 1, 1).view(-1));
+            if (d<=2) {
+                if (d==1) {
+                    assert (lookahead->indices[d].first == lookahead->indices[d].second - 1);
+                    lookahead->action_to_index[constants.actions.ccall] = lookahead->indices[d].first;
+                }
+                else {
+                    assert (lookahead->pot_size[d][1].slice(0, parent_indices.first, parent_indices.second, 1).sizes()[1] == 1);
+                    for (int parent_action_idx=0; parent_action_idx<lookahead->pot_size[d][1].sizes()[0]; ++parent_action_idx) {
+                        int action_id = lookahead->parent_action_id[parent_action_idx];
+                        assert (lookahead->action_to_index.find(action_id) == lookahead->action_to_index.end());
+                        lookahead->action_to_index[action_id] = lookahead->indices[d].first + parent_action_idx;
+                    }
+                }
+            }
+        }
+    }
+    if (lookahead->tree->street == 1)
+        lookahead->next_street_boxes = &get_flop_value();
+    else if (lookahead->tree->street == 2) {
+        lookahead->next_street_boxes = &get_turn_value();
+        lookahead->next_street_boxes->init_bucketing(&lookahead->tree->board);
+    }
+    lookahead->next_street_boxes->start_computation(lookahead->next_round_pot_sizes);
 }
 
 void LookaheadBuilder::_compute_structure() {
@@ -81,10 +134,10 @@ void LookaheadBuilder::construct_data_structures() {
             lookahead->ranges_data_hand_memory = lookahead->ranges_data_hand.clone();
         }
 
-        lookahead->average_cfvs_data[0] = torch::zeros(lookahead->ranges_data[0].sizes(), torch::kFloat32);
-        lookahead->average_cfvs_data[1] = torch::zeros(lookahead->ranges_data[1].sizes(), torch::kFloat32);
-        lookahead->placeholder_data[0] = torch::zeros(lookahead->ranges_data[0].sizes(), torch::kFloat32);
-        lookahead->placeholder_data[1] = torch::zeros(lookahead->ranges_data[1].sizes(), torch::kFloat32);
+        lookahead->average_cfvs_data[0] = torch::zeros(lookahead->ranges_data[0].sizes(), torch::kFloat32).to(device);
+        lookahead->average_cfvs_data[1] = torch::zeros(lookahead->ranges_data[1].sizes(), torch::kFloat32).to(device);
+        lookahead->placeholder_data[0] = torch::zeros(lookahead->ranges_data[0].sizes(), torch::kFloat32).to(device);
+        lookahead->placeholder_data[1] = torch::zeros(lookahead->ranges_data[1].sizes(), torch::kFloat32).to(device);
 
         lookahead->average_strategies_data[1] = torch::zeros({lookahead->actions_count[0], 1, 1, lookahead->river_count, boards_count[4], river_hand_abstract_count}, torch::kFloat32).to(device);
         lookahead->current_strategy_data[1] = torch::zeros(lookahead->average_strategies_data[1].sizes(), torch::kFloat32).to(device);
@@ -290,7 +343,7 @@ void LookaheadBuilder::set_datastructures_from_tree_dfs(Node& node, const int la
 
                 if (existing_bets_count == 0)
                     lookahead->empty_action_mask[layer + 1].slice(0, terminal_actions_count, max_size, 1).slice(
-                            1, next_parent_id, next_parent_id+1, 1).slice(2, next_gp_id, next_gp_id+1, 1) = 0;
+                            1, next_parent_id, next_parent_id + 1, 1).slice(2, next_gp_id, next_gp_id + 1, 1) = 0;
                 else {
                     lookahead->empty_action_mask[layer + 1].slice(
                             0, terminal_actions_count, lookahead->empty_action_mask[layer + 1].sizes()[0]-existing_bets_count, 1).slice(
@@ -331,8 +384,8 @@ void LookaheadBuilder::set_datastructures_from_tree_dfs(Node& node, const int la
                 }
             }
         }
-        else if (node.street == 3 && (node.current_player == constants.players.chance) && node.next_street_root != nullptr) {
-            lookahead->next_street_lookahead.push_back(
+        else if (node.street == 3 && (node.current_player == constants.players.chance) && node.is_next_street_root) {
+            lookahead->next_street_lookahead.emplace_back(
                     std::tuple<int, int, int, int, int, int>
                             (layer, action_id, parent_id, gp_id, node.river_idx, lookahead->tree->river_pots[node.river_idx]));
         }
@@ -384,8 +437,6 @@ void LookaheadBuilder::build_from_tree(Node& tree, const int _river_hand_abstrac
 
     _construct_transition_boxes();
 }
-
-
 
 void LookaheadBuilder::_compute_tree_structures(std::vector<Node*>& current_layer, const int current_depth) {
 

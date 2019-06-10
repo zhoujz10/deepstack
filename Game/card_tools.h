@@ -24,7 +24,20 @@ public:
         memset(p, 0, hand_count*hand_count*sizeof(float));
         read_pointer(p, hand_collide_file);
         hand_collide.copy_(torch::from_blob(p, {hand_count, hand_count}, torch::kFloat32));
-        free(p);
+        delete[] p;
+    }
+
+    static void get_possible_hand_indexes(Board& board, int *possible_hand_indexes) {
+        for (int i=0; i<hand_count; ++i)
+            possible_hand_indexes[i] = 1;
+        if (board.street() == 1)
+            return ;
+        for (auto _card : board.cards)
+            for (auto hand : card_hand_collide[_card]) {
+                if (_card < 0)
+                    break;
+                possible_hand_indexes[hand] = 0;
+            }
     }
 
     void get_possible_hand_indexes(Board& board, torch::Tensor& possible_hand_indexes) {

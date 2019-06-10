@@ -32,9 +32,11 @@ public:
 private:
     static void _fill_additional_attributes(Node& node);
 
-    std::vector<Node>* _get_children_player_node(Node &parent_node, int depth);
+//    std::vector<Node>* _get_children_player_node(Node &parent_node, int depth);
+    void _get_children_player_node(Node &parent_node, int depth);
 
-    std::vector<Node>* _get_children_nodes(Node &parent_node, int depth);
+//    std::vector<Node>* _get_children_nodes(Node &parent_node, int depth);
+    void _get_children_nodes(Node &parent_node, int depth);
 
     void _build_tree_dfs(Node &current_node, int depth);
 };

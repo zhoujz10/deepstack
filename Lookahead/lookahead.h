@@ -14,6 +14,7 @@
 #include "../Settings/game_settings.h"
 #include "../TerminalEquity/terminal_equity.h"
 #include "../Tree/poker_tree_builder.h"
+#include "../Nn/next_round_value.h"
 
 
 class LookaheadBuilder;
@@ -71,6 +72,14 @@ public:
     int num_term_call_nodes = 0;
     std::map<int, std::pair<int, int>> term_fold_indices;
     int num_term_fold_nodes = 0;
+    std::map<int, std::pair<int, int>> indices;
+
+    torch::Tensor next_street_boxes_inputs;
+    torch::Tensor next_street_boxes_outputs;
+    torch::Tensor next_street_boxes_inputs_memory;
+    torch::Tensor next_round_pot_sizes;
+
+    std::map<int, int> action_to_index;
 
     torch::Tensor ranges_data_call;
     torch::Tensor ranges_data_fold;
@@ -86,6 +95,7 @@ public:
     std::vector<int> max_depth;
 
     TerminalEquity& terminal_equity = get_terminal_equity();
+    NextRoundValue* next_street_boxes = nullptr;
 
     int next_board_idx = 0;
 

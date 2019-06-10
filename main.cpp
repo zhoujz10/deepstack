@@ -17,6 +17,16 @@ int main() {
 
     auto card_tools = get_card_tools();
 
+//    int cards[5];
+//    int bets[2];
+//
+//    for (int i=0; i<5; ++i)
+//        cin >> cards[i];
+//
+//    for (int i=0; i<2; ++i)
+//        cin >> bets[i];
+
+
 //    clock_t start = clock();
 
 
@@ -101,6 +111,7 @@ int main() {
 
 
     int cards[5] = {  5, 45, 11, 43, -1 };
+//    int cards[5] = {  5, 15, 25, 35, -1 };
     int bets[2] = { 100, 100 };
     Node build_tree_node( cards, bets );
     build_tree_node.current_player = constants.players.P1;
@@ -109,6 +120,9 @@ int main() {
 
     card_tools.get_uniform_range(build_tree_node.board, player_range);
     card_tools.get_uniform_range(build_tree_node.board, opponent_range);
+
+//    print(player_range);
+//    print(opponent_range);
 
     Resolving resolving;
     std::map<std::string, torch::Tensor> results;

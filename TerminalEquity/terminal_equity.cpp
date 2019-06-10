@@ -92,7 +92,7 @@ void TerminalEquity::set_board(Board &src_board, bool force) {
     board.copy_(src_board);
     this->_reset_tensors();
 
-    if (board.street() == 4)
+    if (board.street() == 3)
         this->_set_river_abstract(board);
     else
         this->river_hand_abstract_count = hand_count;
