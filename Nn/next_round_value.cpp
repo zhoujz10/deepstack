@@ -167,8 +167,8 @@ void NextRoundValue::init_var() {
 }
 
 void NextRoundValue::get_value_aux(torch::Tensor& ranges, torch::Tensor& values, const int next_board_idx) {
-    assert (ranges.sizes()[0] == batch_size);
 
+    assert (ranges.sizes()[0] == batch_size);
     iter ++;
     if (iter == 0) {
 //        initializing data structures
@@ -179,7 +179,7 @@ void NextRoundValue::get_value_aux(torch::Tensor& ranges, torch::Tensor& values,
         aux_values_per_board = torch::zeros({batch_size * constants.players_count, hand_count}, torch::kFloat32).to(device);
         aux_value_normalization = torch::zeros({batch_size, constants.players_count}, torch::kFloat32).to(device);
 //        handling pot feature for the nn
-        aux_next_round_inputs.slice(1, aux_bucket_count * constants.players_count, max_size, 1).copy_(pot_sizes.view(-1) / stack);
+        aux_next_round_inputs.slice(1, aux_bucket_count * constants.players_count, max_size, 1).squeeze().copy_(pot_sizes.view(-1) / stack);
     }
 
     bool use_memory = (iter >= cfr_skip_iters[street]) && next_board_idx > -1;
@@ -232,6 +232,8 @@ void NextRoundValue::get_value_aux(torch::Tensor& ranges, torch::Tensor& values,
     torch::Tensor aux_serialized_inputs_view = aux_next_round_inputs.view({batch_size, -1});
     torch::Tensor aux_serialized_values_view = aux_next_round_values.view({batch_size, -1});
 
+    aux_value_nn->get_value(aux_serialized_inputs_view, aux_serialized_values_view);
+
     if (use_memory) {
         range_normalization.masked_fill_(range_normalization.eq(0), 1);
         next_round_serialized_range /= range_normalization.view({range_normalization.sizes()[0], 1}).expand_as(next_round_serialized_range);
@@ -256,20 +258,97 @@ void NextRoundValue::get_value_aux(torch::Tensor& ranges, torch::Tensor& values,
 
     torch::Tensor _aux_next_round_values = aux_next_round_values.view({batch_size * constants.players_count, -1});
     torch::Tensor _values = values.view({batch_size * constants.players_count, -1});
-
     _bucket_value_to_hand_value_aux(_aux_next_round_values, _values);
 }
 
+void NextRoundValue::get_value(torch::Tensor& ranges, torch::Tensor& values) {
 
+    assert (ranges.sizes()[0] == batch_size);
+    iter ++;
+    if (iter == 0) {
+//        initializing data structures
+        next_round_inputs = torch::zeros({batch_size, board_count, (bucket_count * constants.players_count + 1)}, torch::kFloat32).to(device);
+        next_round_values = torch::zeros({batch_size, board_count, constants.players_count, bucket_count}, torch::kFloat32).to(device);
+        transposed_next_round_values = torch::zeros({batch_size, constants.players_count, board_count, bucket_count}, torch::kFloat32).to(device);
+        next_round_extended_range = torch::zeros({batch_size, constants.players_count, board_count * bucket_count}, torch::kFloat32).to(device);
+        next_round_serialized_range = next_round_extended_range.view({-1, bucket_count});
+        value_normalization = torch::zeros({batch_size, constants.players_count, board_count}, torch::kFloat32).to(device);
+//        handling pot feature for the nn
+        next_round_inputs.slice(2, bucket_count * constants.players_count, max_size, 1).squeeze().copy_(
+                pot_sizes.view(-1).expand({batch_size, board_count}) / stack);
+    }
 
+    bool use_memory = (iter >= cfr_skip_iters[street]);
 
+    if (use_memory && (iter == cfr_skip_iters[street])) {
+        range_normalization_memory = torch::zeros({batch_size * board_count * constants.players_count, 1}, torch::kFloat32).to(device);
+        counterfactual_value_memory = torch::zeros({batch_size, constants.players_count, board_count, bucket_count}, torch::kFloat32).to(device);
+    }
 
+    torch::Tensor _ranges = ranges.view({batch_size * constants.players_count, -1});
+    torch::Tensor _next_round_extended_range = next_round_extended_range.view({batch_size * constants.players_count, -1});
+    _hand_range_to_bucket_range(_ranges, _next_round_extended_range);
+    range_normalization = next_round_serialized_range.sum(1);
+    torch::Tensor rn_view = range_normalization.view({batch_size, constants.players_count, board_count});
 
+    for (int player=0; player<constants.players_count; ++player)
+        value_normalization.slice(1, player, player+1, 1).copy_(rn_view.slice(1, 1-player, 2-player, 1));
+    if (use_memory)
+        range_normalization_memory += value_normalization.view(range_normalization_memory.sizes());
+    range_normalization.masked_fill_(range_normalization.eq(0), 1);
+    next_round_serialized_range /= range_normalization.view({-1, 1}).expand_as(next_round_serialized_range);
 
+    for (int player=0; player<constants.players_count; ++player) {
+        torch::Tensor next_round_inputs_slice = next_round_inputs.slice(2, player*bucket_count, (player+1)*bucket_count, 1);
+        next_round_inputs_slice.copy_(next_round_extended_range.slice(1, player, player + 1, 1).view(next_round_inputs_slice.sizes()));
+    }
 
+    torch::Tensor serialized_inputs_view = next_round_inputs.view({batch_size * board_count, -1});
+    torch::Tensor serialized_values_view = next_round_values.view({batch_size * board_count, -1});
 
+    value_nn->get_value(serialized_inputs_view, serialized_values_view);
 
+    torch::Tensor normalization_view = value_normalization.view({batch_size, constants.players_count, board_count, 1}).transpose(1, 2);
+    next_round_values *= normalization_view.expand_as(next_round_values);
 
+    transposed_next_round_values.copy_(next_round_values.transpose(1, 2));
+
+    if (use_memory)
+        counterfactual_value_memory += transposed_next_round_values;
+
+    torch::Tensor _transposed_next_round_values = transposed_next_round_values.view({batch_size * constants.players_count, -1});
+    torch::Tensor _values = values.view({batch_size * constants.players_count, -1});
+    _bucket_value_to_hand_value(_transposed_next_round_values, _values);
+}
+
+void NextRoundValue::get_value_on_board(Board& board, torch::Tensor& values) {
+    assert (iter == cfr_iters[street] - 1);
+    int _batch_size = values.sizes()[0];
+    assert (_batch_size == batch_size);
+
+    _prepare_next_round_values();
+
+    if (street == 1) {
+        torch::Tensor _counterfactual_value_memory = counterfactual_value_memory.view({batch_size * constants.players_count, -1});
+        torch::Tensor _values = values.view({batch_size * constants.players_count, -1});
+        _bucket_value_to_hand_value_on_board(board, _counterfactual_value_memory, _values);
+    }
+    else
+        _bucket_value_to_hand_value_on_board(board, counterfactual_value_memory, values);
+}
+
+void NextRoundValue::_prepare_next_round_values() {
+    assert (iter == cfr_iters[street] - 1);
+
+    if (_values_are_prepared)
+        return;
+
+    range_normalization_memory.masked_fill_(range_normalization_memory.eq(0), 1);
+    torch::Tensor serialized_memory_view = counterfactual_value_memory.view({-1, bucket_count});
+    serialized_memory_view /= range_normalization_memory.expand_as(serialized_memory_view);
+
+    _values_are_prepared = true;
+}
 
 NextRoundValue& get_flop_value() {
     static NextRoundValue flop_value(1, &get_turn_nn());

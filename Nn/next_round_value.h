@@ -30,7 +30,6 @@ public:
     uint16_t *assignments_turn = nullptr;
 
     torch::Tensor board_buckets;
-
     torch::Tensor impossible_mask;
     torch::Tensor board_indexes;
     torch::Tensor board_indexes_scatter;
@@ -46,8 +45,9 @@ public:
     torch::Tensor counterfactual_value_memory;
     torch::Tensor aux_range_normalization;
 
-    torch::Tensor pot_sizes;
+    torch::Tensor transposed_next_round_values;
 
+    torch::Tensor pot_sizes;
     torch::Tensor next_round_inputs;
     torch::Tensor next_round_values;
     torch::Tensor next_round_extended_range;
@@ -56,16 +56,14 @@ public:
     torch::Tensor value_normalization;
 
 
-
-
     NextRoundValue(int _street, ValueNn *src_value_nn, ValueNn *src_aux_nn = nullptr);
     void init_bucketing(Board* board_ptr = nullptr);
     void start_computation(torch::Tensor& src_pot_sizes);
+    void get_value_aux(torch::Tensor& ranges, torch::Tensor& values, int next_board_idx=-1);
     void get_value(torch::Tensor& ranges, torch::Tensor& values);
     void get_value_on_board(Board& board, torch::Tensor& values);
 
     void init_var();
-    void get_value_aux(torch::Tensor& ranges, torch::Tensor& values, int next_board_idx=-1);
 
 private:
 
