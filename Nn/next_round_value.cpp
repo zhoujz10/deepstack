@@ -8,7 +8,7 @@
 
 NextRoundValue::NextRoundValue(const int _street, ValueNn *src_value_nn, ValueNn *src_aux_nn) {
     value_nn = src_value_nn;
-    aux_value_nn = src_value_nn;
+    aux_value_nn = src_aux_nn;
     street = _street;
     board_count = CardTools::get_boards_count(street+1);
     _range_matrix = torch::zeros({hand_count, board_count * bucket_count}, torch::kFloat32).to(device);

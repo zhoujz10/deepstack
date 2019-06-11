@@ -7,10 +7,18 @@
 
 
 #include <torch/torch.h>
+#include <torch/script.h>
+#include "../Settings/constants.h"
+
 
 class ValueNn {
 
 public:
+
+    int street;
+    std::shared_ptr<torch::jit::script::Module> module;
+
+    explicit ValueNn(int street);
     void get_value(const torch::Tensor& inputs, torch::Tensor& outputs);
 };
 
