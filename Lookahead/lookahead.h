@@ -146,7 +146,7 @@ public:
     explicit LookaheadBuilder(Lookahead *ptr);
 
     void construct_data_structures();
-    void set_datastructures_from_tree_dfs(Node& node, int layer, const int action_id, const int parent_id,
+    void set_datastructures_from_tree_dfs(Node& node, int layer, int action_id, int parent_id,
                                           int gp_id, int cur_action_id, int parent_action_id);
     void build_from_tree(Node& tree, int _river_hand_abstract_count = hand_count);
 

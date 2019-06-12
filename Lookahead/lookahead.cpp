@@ -473,9 +473,7 @@ void Lookahead::get_chance_action_cfv(const int action_index, const int action, 
             auto layer = std::get<0>(t);
             auto action_id = std::get<1>(t);
             auto parent_id = std::get<2>(t);
-            auto gp_id = std::get<3>(t);
             auto i = std::get<4>(t);
-            auto pot = std::get<5>(t);
 
             if ((action_index == 1 && first_call_transition && layer == 1 && action_id == 1) ||
                 (action_index != 1 && first_call_transition && layer == 2 && parent_id == action_index - 2) ||
