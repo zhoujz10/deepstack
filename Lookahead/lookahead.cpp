@@ -458,3 +458,29 @@ void Lookahead::_set_opponent_starting_range(const int _iter) {
     }
 }
 
+void Lookahead::get_chance_action_cfv(const int action_index, const int action, Board& board, torch::Tensor& cfv) {
+    if (tree->street <= 2) {
+        torch::Tensor box_outputs = next_street_boxes_outputs.view({-1, constants.players_count, hand_count});
+        int batch_index = action_to_index[action];
+        torch::Tensor pot_mult = next_round_pot_sizes[batch_index];
+        next_street_boxes->get_value_on_board(board, box_outputs);
+        cfv.copy_(box_outputs[batch_index][1-tree->current_player]);
+        cfv *= pot_mult;
+    }
+    else {
+        int board_idx = CardTools::get_board_index(board);
+        for (auto& t : next_street_lookahead) {
+            auto layer = std::get<0>(t);
+            auto action_id = std::get<1>(t);
+            auto parent_id = std::get<2>(t);
+            auto gp_id = std::get<3>(t);
+            auto i = std::get<4>(t);
+            auto pot = std::get<5>(t);
+
+            if ((action_index == 1 && first_call_transition && layer == 1 && action_id == 1) ||
+                (action_index != 1 && first_call_transition && layer == 2 && parent_id == action_index - 2) ||
+                (!first_call_transition && layer == 2 && parent_id == action_index - 1))
+            cfv.copy_(river_lookahead->cfvs_data_hand_memory[i][board_idx][tree->current_player] / river_lookahead->ranges_data_hand_memory[i][board_idx][0].sum());
+        }
+    }
+}

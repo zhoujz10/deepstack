@@ -110,7 +110,7 @@ public:
     void build_lookahead(Node& _tree);
     void resolve_first_node(torch::Tensor& player_range, torch::Tensor& opponent_range);
     void resolve(torch::Tensor& player_range, torch::Tensor& opponent_cfvs, torch::Tensor& opponent_range_warm_start);
-    torch::Tensor& get_chance_action_cfv(int action_index, int action, Board& board);
+    void get_chance_action_cfv(int action_index, int action, Board& board, torch::Tensor& cfv);
     void get_results(std::map<std::string, torch::Tensor> &out);
 
 private:
