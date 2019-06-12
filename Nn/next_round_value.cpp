@@ -11,11 +11,11 @@ NextRoundValue::NextRoundValue(const int _street, ValueNn *src_value_nn, ValueNn
     aux_value_nn = src_aux_nn;
     street = _street;
     board_count = CardTools::get_boards_count(street+1);
-    _range_matrix = torch::zeros({hand_count, board_count * bucket_count}, torch::kFloat32).to(device);
-    _range_matrix_board_view = _range_matrix.view({hand_count, board_count, bucket_count});
     if (street == 1)
         init_bucketing();
     else {
+        _range_matrix = torch::zeros({hand_count, board_count * bucket_count}, torch::kFloat32).to(device);
+        _range_matrix_board_view = _range_matrix.view({hand_count, board_count, bucket_count});
         canonical_map_turn = new uint32_t[305377800];
         assignments_turn = new uint16_t[13960050];
         read_pointer(canonical_map_turn, canonical_map_turn_file);
@@ -181,7 +181,7 @@ void NextRoundValue::get_value_aux(torch::Tensor& ranges, torch::Tensor& values,
         aux_values_per_board = torch::zeros({batch_size * constants.players_count, hand_count}, torch::kFloat32).to(device);
         aux_value_normalization = torch::zeros({batch_size, constants.players_count}, torch::kFloat32).to(device);
 //        handling pot feature for the nn
-        aux_next_round_inputs.slice(1, aux_bucket_count * constants.players_count, max_size, 1).squeeze().copy_(pot_sizes.view({-1, 1}) / stack);
+        aux_next_round_inputs.slice(1, aux_bucket_count * constants.players_count, max_size, 1).squeeze().copy_(pot_sizes.view(-1) / stack);
     }
 
     bool use_memory = (iter >= cfr_skip_iters[street]) && next_board_idx > -1;
@@ -353,11 +353,11 @@ void NextRoundValue::_prepare_next_round_values() {
 }
 
 NextRoundValue& get_flop_value() {
-    static NextRoundValue flop_value(1, &get_turn_nn());
+    static NextRoundValue flop_value(1, &get_turn_nn(), &get_aux_nn());
     return flop_value;
 }
 
 NextRoundValue& get_turn_value() {
-    static NextRoundValue turn_value(2, &get_flop_nn(), &get_aux_nn());
+    static NextRoundValue turn_value(2, &get_flop_nn());
     return turn_value;
 }

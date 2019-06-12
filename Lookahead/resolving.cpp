@@ -77,13 +77,3 @@ void Resolving::get_action_strategy(const int action, torch::Tensor& strategy) {
     strategy.copy_(resolve_results["strategy"][action_id]);
 }
 
-
-
-
-
-
-
-
-
-
-

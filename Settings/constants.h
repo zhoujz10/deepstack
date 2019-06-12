@@ -16,6 +16,8 @@ static const c10::Device device = c10::Device(c10::DeviceType::CUDA);
 
 static const char *hand_collide_file = "data/hand_collide.bin";
 
+static const char *preflop_equity_matrix_file = "data/preflop_equity_matrix.bin";
+
 static const char *flop_equity_matrix_dir = "data/equity_matrix_flop/";
 
 static const char *board_buckets_file = "data/board_buckets.bin";

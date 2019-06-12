@@ -21,7 +21,7 @@ void LookaheadBuilder::_construct_transition_boxes() {
     for (int d=1; d<lookahead->depth+1; ++d) {
         int before = lookahead->num_pot_sizes;
         if (d == 1 and lookahead->first_call_transition) {
-            lookahead->num_pot_sizes += 1;
+            lookahead->num_pot_sizes ++;
             lookahead->indices[d] = std::pair<int, int>(before, lookahead->num_pot_sizes);
         }
         else if (lookahead->pot_size[d][1].sizes()[0] > 1) {

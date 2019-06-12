@@ -110,10 +110,11 @@ int main() {
 //    std::cout << test << std::endl;
 
 
-    int cards[5] = {  5, 45, 11, -1, -1 };
+    int cards[5] = {  -1, -1, -1, -1, -1 };
+//    int cards[5] = {  5, 45, 11, -1, -1 };
 //    int cards[5] = {  5, 45, 11, 43, -1 };
 //    int cards[5] = {  5, 15, 25, 35, -1 };
-    int bets[2] = { 100, 100 };
+    int bets[2] = { 1000, 1000 };
     Node build_tree_node( cards, bets );
     build_tree_node.current_player = constants.players.P1;
     torch::Tensor player_range = torch::zeros(hand_count, torch::kFloat32).to(device);
@@ -126,10 +127,9 @@ int main() {
 //    print(opponent_range);
 
     Resolving resolving;
-    std::map<std::string, torch::Tensor> results;
-    resolving.resolve_first_node(build_tree_node, player_range, opponent_range, results);
+    resolving.resolve_first_node(build_tree_node, player_range, opponent_range);
 
-    std::cout << results["root_cfvs_both_players"] << std::endl;
+    std::cout << resolving.get_root_cfv_both_players() << std::endl;
 
 
 

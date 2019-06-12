@@ -6,6 +6,10 @@
 
 
 TerminalEquity::TerminalEquity() {
+    auto p = new float[hand_count * hand_count];
+    read_pointer(p, preflop_equity_matrix_file);
+    preflop_equity_matrix.copy_(torch::from_blob(p, {hand_count, hand_count}, torch::kFloat32));
+    delete[] p;
     Board b;
     this->set_board(b, true);
 }
