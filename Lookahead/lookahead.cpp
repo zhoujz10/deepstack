@@ -71,10 +71,6 @@ void Lookahead::_compute_current_strategies_next_street() {
         regrets_sum[d].slice(4, 0, 1, 1).copy_(positive_regrets_data[d].sum(0).unsqueeze(4));
         current_strategy_data[d].copy_(positive_regrets_data[d] / regrets_sum[d].slice(4, 0, 1, 1).squeeze(4).expand_as(positive_regrets_data[d]));
     }
-//    print(empty_action_mask[1].slice(4, 0, 1, 1).slice(5, 0, 1, 1).squeeze());
-//    print(current_strategy_data[1].slice(4, 0, 1, 1).slice(5, 0, 1, 1).squeeze());
-//    print(current_strategy_data[2].slice(4, 0, 1, 1).slice(5, 0, 1, 1).squeeze(5).squeeze(4).squeeze(3));
-//    exit(0);
 }
 
 void Lookahead::_compute_ranges() {
@@ -107,8 +103,6 @@ void Lookahead::_compute_ranges() {
             river_lookahead->ranges_convert[i].copy_(
                     torch::bmm(rd_slice.expand({boards_count[4], -1, -1}), terminal_equity.river_hand_abstract));
             river_lookahead->ranges_data_hand[i].copy_(rd_slice.expand_as(river_lookahead->ranges_data_hand[i]));
-//            print(river_lookahead->ranges_data_hand[0]);
-//            exit(0);
 
             river_lookahead->ranges_data_hand[i].squeeze().masked_fill_(terminal_equity.mask_next_street, 0);
         }
@@ -150,15 +144,8 @@ void Lookahead::_compute_ranges_next_street() {
         else
             next_level_ranges.copy_(super_view.expand_as(next_level_ranges));
 
-//        print(ranges_data[1].slice(6, 0, 1, 1).slice(5, 0, 1, 1).slice(4, 0, 1, 1).squeeze());
-//        print(current_strategy_data[1].slice(5, 0, 1, 1).slice(4, 0, 1, 1).squeeze());
         next_level_ranges.slice(5, acting_player[d], acting_player[d]+1, 1).squeeze(5) *= current_strategy_data[d+1];
-//        print(ranges_data[1].slice(6, 0, 1, 1).slice(5, 0, 1, 1).slice(4, 0, 1, 1).squeeze());
-//        exit(0);
     }
-//    print(ranges_data[3].slice(6, 0, 1, 1).slice(5, 0, 1, 1).slice(4, 0, 1, 1).squeeze());
-//    print(ranges_data[2].slice(6, 0, 1, 1).slice(5, 1, 2, 1).slice(4, 0, 1, 1).squeeze());
-//    exit(0);
 }
 
 void Lookahead::_compute_update_average_strategies(const int _iter) {
@@ -167,6 +154,7 @@ void Lookahead::_compute_update_average_strategies(const int _iter) {
 }
 
 void Lookahead::_compute_terminal_equities_terminal_equity() {
+
     for (int d=1; d<depth+1; ++d) {
         if (d>1 or first_call_terminal) {
             if (tree->street != 4)
@@ -182,7 +170,6 @@ void Lookahead::_compute_terminal_equities_terminal_equity() {
 
     terminal_equity.call_value(ranges_data_call, cfvs_data_call);
     terminal_equity.fold_value(ranges_data_fold, cfvs_data_fold);
-
 
     for (int d=1; d<depth+1; ++d) {
         if (d>1 or first_call_terminal) {
@@ -218,15 +205,59 @@ void Lookahead::_compute_terminal_equities_terminal_equity_next_street() {
             cfvs_data[d][0].slice(4, 1, max_size, 1) *= -fold_mutliplier;
         }
     }
-//    print(ranges_data[2].slice(4, 0, 1, 1).slice(5, 0, 1, 1).slice(6, 0, 1, 1).squeeze());
-//    exit(0);
-//    print(cfvs_data[3][0].slice(5, 0, 1, 1).slice(4, 0, 1, 1).slice(3, 0, 1, 1).squeeze());
-//    exit(0);
 }
 
 void Lookahead::_compute_terminal_equities_next_street_box(const int _iter) {
     assert (tree->street <= 3);
-//    TODO: finish this function
+
+    if (num_pot_sizes == 0)
+        return;
+
+    for (int d=1; d<depth+1; ++d) {
+        if (d > 1 || first_call_transition) {
+            if (ranges_data[d][1].sizes()[0] > 1 || (d == 1 && first_call_transition)) {
+                auto parent_indices = std::pair<int, int>(0, -1);
+                if (d == 1)
+                    parent_indices = std::pair<int, int>(0, 1);
+                next_street_boxes_outputs.slice(0, indices[d].first, indices[d].second, 1).copy_(
+                        ranges_data[d][1].slice(0, parent_indices.first, parent_indices.second, 1).view({-1, constants.players_count, hand_count}));
+            }
+        }
+    }
+
+    if (tree->current_player== 0)
+        next_street_boxes_inputs.copy_(next_street_boxes_outputs);
+    else {
+        next_street_boxes_inputs.slice(1, 0, 1, 1).copy_(next_street_boxes_outputs.slice(1, 1, 2, 1));
+        next_street_boxes_inputs.slice(1, 1, 2, 1).copy_(next_street_boxes_outputs.slice(1, 0, 1, 1));
+    }
+
+    if (tree->street == 1) {
+        if (_iter >= cfr_skip_iters[1])
+            next_street_boxes_inputs_memory[_iter - cfr_skip_iters[1]].copy_(next_street_boxes_inputs);
+        next_street_boxes->get_value_aux(next_street_boxes_inputs, next_street_boxes_outputs, next_board_idx);
+    }
+    else
+        next_street_boxes->get_value(next_street_boxes_inputs, next_street_boxes_outputs);
+
+    if (tree->current_player == 0) {
+        next_street_boxes_inputs.copy_(next_street_boxes_outputs);
+        next_street_boxes_outputs.slice(1, 0, 1, 1).copy_(next_street_boxes_inputs.slice(1, 1, 2, 1));
+        next_street_boxes_outputs.slice(1, 1, 2, 1).copy_(next_street_boxes_inputs.slice(1, 0, 1, 1));
+    }
+
+    for (int d=1; d<depth+1; ++d) {
+        if (d > 1 || first_call_transition) {
+            if (ranges_data[d][1].sizes()[0] > 1 || (d == 1 && first_call_transition)) {
+                auto parent_indices = std::pair<int, int>(0, -1);
+                if (d == 1)
+                    parent_indices = std::pair<int, int>(0, 1);
+                cfvs_data[d][1].slice(0, parent_indices.first, parent_indices.second, 1).copy_(
+                        next_street_boxes_outputs.slice(0, indices[d].first, indices[d].second, 1).view(
+                                ranges_data[d][1].slice(0, parent_indices.first, parent_indices.second, 1).sizes()));
+            }
+        }
+    }
 }
 
 void Lookahead::_compute_terminal_equities_next_street_resolve(const int _iter) {

@@ -60,7 +60,10 @@ void TerminalEquity::_set_call_matrix() {
             int card_1 = board.cards[0] + board.cards[1] + board.cards[2] - card_0 - card_2;
             char equity_matrix_file[50];
             sprintf(equity_matrix_file, "%s%d_%d_%d.bin", flop_equity_matrix_dir, card_0, card_1, card_2);
-            read_pointer((float*)equity_matrix_np, equity_matrix_file);
+            if (access(equity_matrix_file, 0) == 0)
+                read_pointer((float*)equity_matrix_np, equity_matrix_file);
+            else
+                set_call_matrix_cpp(board.cards, equity_matrix_np);
             equity_matrix.copy_(torch::from_blob(equity_matrix_np, equity_matrix.sizes(), equity_matrix.dtype()));
             break;
         }

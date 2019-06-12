@@ -19,8 +19,9 @@ public:
     std::shared_ptr<torch::jit::script::Module> module;
 
     explicit ValueNn(int street);
-    void get_value(const torch::Tensor& inputs, torch::Tensor& outputs);
+    void get_value(torch::Tensor& inputs, torch::Tensor& outputs);
 };
+
 
 ValueNn& get_aux_nn();
 ValueNn& get_flop_nn();

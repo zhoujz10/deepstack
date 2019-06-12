@@ -71,7 +71,7 @@ public:
         int street = board.street() + 1;
         int board_idx = 0;
         switch (street) {
-            case 1: {
+            case 2: {
                 for (int card_0 = 0; card_0 < card_count; ++card_0) {
                     for (int card_1 = card_0 + 1; card_1 < card_count; ++card_1) {
                         for (int card_2 = card_1 + 1; card_2 < card_count; ++card_2) {
@@ -84,7 +84,7 @@ public:
                 }
                 break;
             }
-            case 2: {
+            case 3: {
                 for (int card_3 = 0; card_3 < card_count; ++card_3) {
                     if (board.contain(card_3))
                         continue;
@@ -94,7 +94,7 @@ public:
                 }
                 break;
             }
-            case 3: {
+            case 4: {
                 for (int card_4 = 0; card_4 < card_count; ++card_4) {
                     if (board.contain(card_4))
                         continue;

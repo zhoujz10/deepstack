@@ -16,6 +16,8 @@ NextRoundValue::NextRoundValue(const int _street, ValueNn *src_value_nn, ValueNn
     if (street == 1)
         init_bucketing();
     else {
+        canonical_map_turn = new uint32_t[305377800];
+        assignments_turn = new uint16_t[13960050];
         read_pointer(canonical_map_turn, canonical_map_turn_file);
         read_pointer(assignments_turn, assignments_turn_file);
     }
@@ -51,7 +53,7 @@ void NextRoundValue::init_bucketing(Board *board_ptr) {
         int card_1 = board_ptr->cards[0] + board_ptr->cards[1] + board_ptr->cards[2] - card_0 - card_2;
         char range_matrix_cache_file[50];
         sprintf(range_matrix_cache_file, "%s%d_%d_%d.bin", range_matrix_cache_root_file, card_0, card_1, card_2);
-        if (access(range_matrix_cache_file, 0) != 0) {
+        if (access(range_matrix_cache_file, 0) == 0) {
             auto p = new uint8_t[hand_count * board_count * bucket_count];
             read_pointer(p, range_matrix_cache_file);
             _range_matrix_board_view = torch::from_blob(p, {hand_count, board_count, bucket_count}, torch::kUInt8).to(device).to(torch::kFloat32);
@@ -179,7 +181,7 @@ void NextRoundValue::get_value_aux(torch::Tensor& ranges, torch::Tensor& values,
         aux_values_per_board = torch::zeros({batch_size * constants.players_count, hand_count}, torch::kFloat32).to(device);
         aux_value_normalization = torch::zeros({batch_size, constants.players_count}, torch::kFloat32).to(device);
 //        handling pot feature for the nn
-        aux_next_round_inputs.slice(1, aux_bucket_count * constants.players_count, max_size, 1).squeeze().copy_(pot_sizes.view(-1) / stack);
+        aux_next_round_inputs.slice(1, aux_bucket_count * constants.players_count, max_size, 1).squeeze().copy_(pot_sizes.view({-1, 1}) / stack);
     }
 
     bool use_memory = (iter >= cfr_skip_iters[street]) && next_board_idx > -1;
@@ -275,7 +277,7 @@ void NextRoundValue::get_value(torch::Tensor& ranges, torch::Tensor& values) {
         value_normalization = torch::zeros({batch_size, constants.players_count, board_count}, torch::kFloat32).to(device);
 //        handling pot feature for the nn
         next_round_inputs.slice(2, bucket_count * constants.players_count, max_size, 1).squeeze().copy_(
-                pot_sizes.view(-1).expand({batch_size, board_count}) / stack);
+                pot_sizes.view({-1, 1}).expand({batch_size, board_count}) / stack);
     }
 
     bool use_memory = (iter >= cfr_skip_iters[street]);

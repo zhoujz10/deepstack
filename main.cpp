@@ -16,6 +16,7 @@
 int main() {
 
     auto card_tools = get_card_tools();
+    get_turn_value();
 
 //    int cards[5];
 //    int bets[2];
@@ -109,8 +110,8 @@ int main() {
 //    std::cout << test << std::endl;
 
 
-
-    int cards[5] = {  5, 45, 11, 43, -1 };
+    int cards[5] = {  5, 45, 11, -1, -1 };
+//    int cards[5] = {  5, 45, 11, 43, -1 };
 //    int cards[5] = {  5, 15, 25, 35, -1 };
     int bets[2] = { 100, 100 };
     Node build_tree_node( cards, bets );

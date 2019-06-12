@@ -7,6 +7,7 @@
 
 
 ValueNn::ValueNn(int street) : street(street) {
+    torch::autograd::GradMode::set_enabled(false);
     switch (street) {
         case 1: {
             module = torch::jit::load(aux_net_file);
@@ -26,7 +27,7 @@ ValueNn::ValueNn(int street) : street(street) {
     module->to(device);
 };
 
-void ValueNn::get_value(const torch::Tensor& inputs, torch::Tensor& outputs) {
+void ValueNn::get_value(torch::Tensor& inputs, torch::Tensor& outputs) {
     std::vector<torch::jit::IValue> _inputs;
     _inputs.emplace_back(inputs);
     outputs.copy_(module->forward(_inputs).toTensor());
