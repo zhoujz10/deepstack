@@ -27,9 +27,9 @@ void Lookahead::resolve_first_node(torch::Tensor& player_range, torch::Tensor& o
 }
 
 void Lookahead::resolve(torch::Tensor& player_range, torch::Tensor& opponent_cfvs, torch::Tensor& opponent_range_warm_start) {
-//    reconstruction_gadget = CFRDGadget(self.tree['board'], player_range, opponent_cfvs, opponent_range_warm_start)
+    reconstruction_gadget = new CFRDGadget(tree->board, opponent_cfvs, opponent_range_warm_start);
     ranges_data[0].slice(3, 0, 1, 1).copy_(player_range);
-//    reconstruction_opponent_cfvs = opponent_cfvs
+    reconstruction_opponent_cfvs = true;
     _compute();
 }
 
@@ -431,10 +431,8 @@ void Lookahead::get_results(std::map<std::string, torch::Tensor> &out) {
 
     out["achieved_cfvs"] = average_cfvs_data[0].view({constants.players_count, hand_count})[0].clone();
 
-//    if self.reconstruction_opponent_cfvs is not None:
-//    out['root_cfvs'] = None
-//    else:
-    out["root_cfvs"] = average_cfvs_data[0].view({constants.players_count, hand_count})[1].clone();
+    if (!reconstruction_opponent_cfvs)
+        out["root_cfvs"] = average_cfvs_data[0].view({constants.players_count, hand_count})[1].clone();
 
     out["root_cfvs_both_players"] = average_cfvs_data[0].view({constants.players_count, hand_count}).clone();
     out["root_cfvs_both_players"][1].copy_(average_cfvs_data[0].view({constants.players_count, hand_count})[0]);
@@ -454,6 +452,9 @@ void Lookahead::get_results(std::map<std::string, torch::Tensor> &out) {
 }
 
 void Lookahead::_set_opponent_starting_range(const int _iter) {
-
+    if (reconstruction_opponent_cfvs) {
+        reconstruction_gadget->compute_opponent_range(cfvs_data[0][0][0][0][0], _iter);
+        ranges_data[0].slice(3, 1, 2, 1).copy_(reconstruction_gadget->input_opponent_range);
+    }
 }
 

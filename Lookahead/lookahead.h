@@ -15,6 +15,7 @@
 #include "../TerminalEquity/terminal_equity.h"
 #include "../Tree/poker_tree_builder.h"
 #include "../Nn/next_round_value.h"
+#include "cfrd_gadget.h"
 
 
 class LookaheadBuilder;
@@ -96,6 +97,8 @@ public:
 
     TerminalEquity& terminal_equity = get_terminal_equity();
     NextRoundValue* next_street_boxes = nullptr;
+    CFRDGadget* reconstruction_gadget = nullptr;
+    bool reconstruction_opponent_cfvs = false;
 
     int next_board_idx = 0;
 

@@ -179,9 +179,13 @@ const int river_pots_fractions_1[20] = {1, 2, 3, 6, 9, 18, 27, 54, 81, 162, 243,
 
 const float regret_epsilon = 1.0 / 1000000000;
 
+const float gadget_epsilon = 1.0 / 100000000;
+
 const int boards_count[5] = { 0, 0, 22100, 49, 48 };
 
 const bool pokermaster = false;
+
+const bool warm_start = true;
 
 const float pot_fractions_by_street[5][2][3] = {
     { {   1, -1, -1 }, { 0.75, 1.25, -1 } },

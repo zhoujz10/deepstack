@@ -17,6 +17,6 @@ find_package(Torch REQUIRED)
 add_executable(deepstack_cpp main.cpp Settings/game_settings.h TerminalEquity/terminal_equity.h Game/board.h Game/board.h Game/card_tools.h
         Settings/constants.h io.h runtime.h Tree/poker_tree_builder.h Game/bet_sizing.h Tree/node.h Lookahead/lookahead.h Lookahead/lookahead.cpp
         Tree/poker_tree_builder.cpp Game/bet_sizing.cpp TerminalEquity/terminal_equity.cpp runtime.cpp Lookahead/LookaheadBuilder.cpp
-        Game/card_tools.cpp Lookahead/resolving.h Lookahead/resolving.cpp Nn/next_round_value.h Nn/next_round_value.cpp Nn/value_nn.h Nn/value_nn.cpp)
+        Game/card_tools.cpp Lookahead/resolving.h Lookahead/resolving.cpp Nn/next_round_value.h Nn/next_round_value.cpp Nn/value_nn.h Nn/value_nn.cpp Lookahead/cfrd_gadget.h Lookahead/cfrd_gadget.cpp)
 target_link_libraries(deepstack_cpp "${TORCH_LIBRARIES}")
 
