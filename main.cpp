@@ -3,6 +3,17 @@
 #include <iostream>
 #include <cmath>
 #include <time.h>
+
+#include "Web/server_http.hpp"
+#define BOOST_SPIRIT_THREADSAFE
+#include <boost/property_tree/json_parser.hpp>
+#include <boost/property_tree/ptree.hpp>
+#include <algorithm>
+#include <boost/filesystem.hpp>
+#include <fstream>
+#include <vector>
+
+
 #include "TerminalEquity/terminal_equity.h"
 #include "Game/board.h"
 #include "Tree/node.h"
@@ -12,11 +23,45 @@
 #include "Lookahead/resolving.h"
 
 
+using namespace boost::property_tree;
+using HttpServer = SimpleWeb::Server<SimpleWeb::HTTP>;
+
 
 int main() {
 
     auto card_tools = get_card_tools();
     get_turn_value();
+
+    HttpServer server;
+    server.config.port = 8080;
+
+    server.resource["^/json$"]["POST"] = [](shared_ptr<HttpServer::Response> response, shared_ptr<HttpServer::Request> request) {
+        try {
+            ptree pt;
+            read_json(request->content, pt);
+
+            std::cout << pt.get<int>("pot") << std::endl;
+
+
+            auto name = pt.get<string>("firstName") + " " + pt.get<string>("lastName");
+
+            *response << "HTTP/1.1 200 OK\r\n"
+                      << "Content-Length: " << name.length() << "\r\n\r\n"
+                      << name;
+        }
+        catch (const exception &e) {
+            *response << "HTTP/1.1 400 Bad Request\r\nContent-Length: " << strlen(e.what()) << "\r\n\r\n"
+                      << e.what();
+        }
+    };
+
+    std::cout << "Server ready at port " << server.config.port << "." << std::endl;
+
+    thread server_thread([&server]() {
+        // Start server
+        server.start();
+    });
+    server_thread.join();
 
 //    int cards[5];
 //    int bets[2];
@@ -110,26 +155,33 @@ int main() {
 //    std::cout << test << std::endl;
 
 
-    int cards[5] = {  -1, -1, -1, -1, -1 };
-//    int cards[5] = {  5, 45, 11, -1, -1 };
-//    int cards[5] = {  5, 45, 11, 43, -1 };
-//    int cards[5] = {  5, 15, 25, 35, -1 };
-    int bets[2] = { 1000, 1000 };
-    Node build_tree_node( cards, bets );
-    build_tree_node.current_player = constants.players.P1;
-    torch::Tensor player_range = torch::zeros(hand_count, torch::kFloat32).to(device);
-    torch::Tensor opponent_range = torch::zeros(hand_count, torch::kFloat32).to(device);
 
-    card_tools.get_uniform_range(build_tree_node.board, player_range);
-    card_tools.get_uniform_range(build_tree_node.board, opponent_range);
 
-//    print(player_range);
-//    print(opponent_range);
 
-    Resolving resolving;
-    resolving.resolve_first_node(build_tree_node, player_range, opponent_range);
 
-    std::cout << resolving.get_root_cfv_both_players() << std::endl;
+
+
+//    int cards[5] = {  -1, -1, -1, -1, -1 };
+////    int cards[5] = {  5, 45, 11, -1, -1 };
+////    int cards[5] = {  5, 45, 11, 43, -1 };
+////    int cards[5] = {  5, 15, 25, 35, -1 };
+//    int bets[2] = { 1000, 1000 };
+//    Node build_tree_node( cards, bets );
+//    build_tree_node.current_player = constants.players.P1;
+//    torch::Tensor player_range = torch::zeros(hand_count, torch::kFloat32).to(device);
+//    torch::Tensor opponent_range = torch::zeros(hand_count, torch::kFloat32).to(device);
+//
+//    card_tools.get_uniform_range(build_tree_node.board, player_range);
+//    card_tools.get_uniform_range(build_tree_node.board, opponent_range);
+//
+//    Resolving resolving;
+//    resolving.resolve_first_node(build_tree_node, player_range, opponent_range);
+//
+//    std::cout << resolving.get_root_cfv_both_players() << std::endl;
+
+
+
+
 
 
 
