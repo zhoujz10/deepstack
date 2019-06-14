@@ -10,8 +10,7 @@ TerminalEquity::TerminalEquity() {
     read_pointer(p, preflop_equity_matrix_file);
     preflop_equity_matrix.copy_(torch::from_blob(p, {hand_count, hand_count}, torch::kFloat32));
     delete[] p;
-    Board b;
-    this->set_board(b, true);
+    this->set_board(Board(), true);
 }
 
 void TerminalEquity::_reset_tensors() {
@@ -93,7 +92,7 @@ void TerminalEquity::_set_fold_matrix() {
 }
 
 
-void TerminalEquity::set_board(Board &src_board, bool force) {
+void TerminalEquity::set_board(const Board &src_board, bool force) {
     if (board.is_same(src_board) && ! force)
         return;
     board.copy_(src_board);

@@ -40,7 +40,7 @@ public:
         memcpy(cards, src.cards, board_size*sizeof(int));
     }
 
-    int street() {
+    int street() const {
         if (cards[0] == -1)
             return 1;
         if (cards[3] == -1)

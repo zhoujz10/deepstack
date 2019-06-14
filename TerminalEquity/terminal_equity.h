@@ -70,7 +70,7 @@ public:
 
     void _set_fold_matrix();
 
-    void set_board(Board& src_board, bool force = false);
+    void set_board(const Board& src_board = Board(), bool force = false);
 
     void call_value(const torch::Tensor &ranges, torch::Tensor &result);
 

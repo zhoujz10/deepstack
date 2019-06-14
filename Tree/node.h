@@ -10,6 +10,7 @@
 #include "../Game/board.h"
 
 struct Node {
+
     int node_type = 0;
 
     bool terminal = false;
@@ -71,6 +72,11 @@ struct Node {
     void set_bets(const int b) {
         bets[0] = b;
         bets[1] = b;
+    }
+
+    void set_bets(const int* b) {
+        bets[0] = b[0];
+        bets[1] = b[1];
     }
 };
 

@@ -63,6 +63,9 @@ int main() {
     });
     server_thread.join();
 
+
+
+
 //    int cards[5];
 //    int bets[2];
 //

@@ -27,7 +27,7 @@ public:
         delete[] p;
     }
 
-    static void get_possible_hand_indexes(Board& board, int *possible_hand_indexes) {
+    static void get_possible_hand_indexes(const Board& board, int *possible_hand_indexes) {
         for (int i=0; i<hand_count; ++i)
             possible_hand_indexes[i] = 1;
         if (board.street() == 1)
@@ -40,7 +40,7 @@ public:
             }
     }
 
-    void get_possible_hand_indexes(Board& board, torch::Tensor& possible_hand_indexes) {
+    void get_possible_hand_indexes(const Board& board, torch::Tensor& possible_hand_indexes) {
         possible_hand_indexes.fill_(1);
         if (board.street() == 1)
             return ;
@@ -52,13 +52,13 @@ public:
             }
     }
 
-    void get_impossible_hand_indexes(Board& board, torch::Tensor& possible_hand_indexes) {
+    void get_impossible_hand_indexes(const Board& board, torch::Tensor& possible_hand_indexes) {
         get_possible_hand_indexes(board, possible_hand_indexes);
         possible_hand_indexes += -1;
         possible_hand_indexes *= -1;
     }
 
-    void get_uniform_range(Board &board, torch::Tensor &range) {
+    void get_uniform_range(const Board &board, torch::Tensor &range) {
         get_possible_hand_indexes(board, range);
         range /= range.sum();
     }
