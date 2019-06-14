@@ -41,7 +41,7 @@ public:
     ContinualResolving();
     void resolve_first_node();
     void start_new_hand(ptree& state);
-    void compute_action(Node& node, ptree& state);
+    int compute_action(Node& node, ptree& state);
 
 private:
     void _resolve_node(Node& node, ptree& state);

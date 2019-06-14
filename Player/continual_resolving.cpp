@@ -83,7 +83,16 @@ void ContinualResolving::_update_invariant(Node& node, ptree& state) {
     }
 }
 
+int ContinualResolving::compute_action(Node& node, ptree& state) {
+    _resolve_node(node, state);
+    int sampled_bet = _sample_bet(node, state);
+    last_bet = sampled_bet;
 
+    decision_id ++;
+    last_node = new Node(node);
+
+    return sampled_bet;
+}
 
 
 
