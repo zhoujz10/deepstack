@@ -28,6 +28,7 @@ ValueNn::ValueNn(int street) : street(street) {
 };
 
 void ValueNn::get_value(torch::Tensor& inputs, torch::Tensor& outputs) {
+    torch::autograd::GradMode::set_enabled(false);
     std::vector<torch::jit::IValue> _inputs;
     _inputs.emplace_back(inputs);
     outputs.copy_(module->forward(_inputs).toTensor());

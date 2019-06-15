@@ -6,6 +6,8 @@
 #define DEEPSTACK_CPP_CONTINUAL_RESOLVING_H
 
 
+#include <time.h>
+#include <random>
 #include <torch/torch.h>
 #include <boost/property_tree/ptree.hpp>
 #include "../Settings/constants.h"
@@ -25,8 +27,10 @@ public:
     torch::Tensor starting_player_range = torch::ones(hand_count, torch::kFloat32).to(device);
     torch::Tensor current_player_range = torch::ones(hand_count, torch::kFloat32).to(device);
     torch::Tensor current_opponent_cfvs_bound = torch::zeros(hand_count, torch::kFloat32).to(device);
-    torch::Tensor starting_cfvs_p2;
+    torch::Tensor starting_cfvs_p2 = torch::zeros(hand_count, torch::kFloat32).to(device);
     torch::Tensor opponent_range_warm_start;
+
+    std::function<float()> dice = std::bind(distribution, generator);
 
     Node *last_node = nullptr;
     int decision_id = -1;
@@ -46,9 +50,10 @@ public:
 private:
     void _resolve_node(Node& node, ptree& state);
     void _update_invariant(Node& node, ptree& state);
-    void _sample_bet(Node& node, ptree& state);
+    int _sample_bet(Node& node, ptree& state);
 
 };
+
 
 
 #endif //DEEPSTACK_CPP_CONTINUAL_RESOLVING_H

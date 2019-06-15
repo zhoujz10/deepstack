@@ -3,6 +3,7 @@
 #include <iostream>
 #include <cmath>
 #include <time.h>
+#include <random>
 
 #include "Web/server_http.hpp"
 #define BOOST_SPIRIT_THREADSAFE
@@ -18,9 +19,11 @@
 #include "Game/board.h"
 #include "Tree/node.h"
 #include "Game/card_tools.h"
+#include "Game/card_to_string_conversion.h"
 #include "Game/bet_sizing.h"
 #include "Tree/poker_tree_builder.h"
 #include "Lookahead/resolving.h"
+#include "Player/continual_resolving.h"
 
 
 using namespace boost::property_tree;
@@ -29,25 +32,43 @@ using HttpServer = SimpleWeb::Server<SimpleWeb::HTTP>;
 
 int main() {
 
+    CardToString& card_to_string = get_card_to_string();
+
     auto card_tools = get_card_tools();
     get_turn_value();
+
+    ContinualResolving continual_resolving;
 
     HttpServer server;
     server.config.port = 8080;
 
-    server.resource["^/json$"]["POST"] = [](shared_ptr<HttpServer::Response> response, shared_ptr<HttpServer::Request> request) {
+    server.resource["^/json$"]["POST"] = [&card_to_string, &continual_resolving](shared_ptr<HttpServer::Response> response, shared_ptr<HttpServer::Request> request) {
         try {
             ptree pt;
+            Node node;
             read_json(request->content, pt);
 
-            std::cout << pt.get<int>("pot") << std::endl;
+            int rate = pt.get<int>("ante") / ante;
 
+            pt.put<int>("hand_id", card_to_string.string_to_hand(pt.get<string>("hand")));
 
-            auto name = pt.get<string>("firstName") + " " + pt.get<string>("lastName");
+            node.terminal = false;
+            node.current_player = pt.get<int>("position");
+            node.street = pt.get<int>("street");
+            card_to_string.string_to_board(pt.get<string>("board"), node.board);
+
+            int bets[2] = {pt.get<int>("bet_0") / rate, pt.get<int>("bet_1") / rate};
+            node.set_bets(bets);
+            if (pt.get<int>("new_game"))
+                continual_resolving.start_new_hand(pt);
+
+            int adviced_action = continual_resolving.compute_action(node, pt);
+
+            auto action = std::to_string(adviced_action);
 
             *response << "HTTP/1.1 200 OK\r\n"
-                      << "Content-Length: " << name.length() << "\r\n\r\n"
-                      << name;
+                      << "Content-Length: " << action.length() << "\r\n\r\n"
+                      << action;
         }
         catch (const exception &e) {
             *response << "HTTP/1.1 400 Bad Request\r\nContent-Length: " << strlen(e.what()) << "\r\n\r\n"
@@ -64,8 +85,6 @@ int main() {
     server_thread.join();
 
 
-
-
 //    int cards[5];
 //    int bets[2];
 //
@@ -77,7 +96,6 @@ int main() {
 
 
 //    clock_t start = clock();
-
 
     auto n = chrono::system_clock::now();
     auto m = n.time_since_epoch();

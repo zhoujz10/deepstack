@@ -209,4 +209,13 @@ const float max_number = 9999999999;
 
 const int max_size = 99999;
 
+const std::default_random_engine generator(clock());
+const std::uniform_real_distribution<float> distribution(0, 1);
+
+
+const char suit_table[4] = {'h', 's', 'c', 'd'};
+
+const char rank_table[13] = {'A', 'K', 'Q', 'J', 'T', '9', '8', '7', '6', '5', '4', '3', '2'};
+
+
 #endif //DEEPSTACK_CPP_CONSTANTS_H
