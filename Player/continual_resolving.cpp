@@ -63,6 +63,9 @@ void ContinualResolving::_resolve_node(Node &node, ptree &state) {
         resolving = new Resolving();
         resolving->resolve(node, current_player_range, current_opponent_cfvs_bound, opponent_range_warm_start);
     }
+
+//    print(current_player_range.slice(0, 0, 20, 1));
+//    print(current_opponent_cfvs_bound.slice(0, 0, 20, 1));
 }
 
 void ContinualResolving::_update_invariant(Node& node, ptree& state) {
@@ -70,8 +73,8 @@ void ContinualResolving::_update_invariant(Node& node, ptree& state) {
         assert (last_node->street + 1 == node.street);
         resolving->get_chance_action_cfv(last_bet, node.board, current_opponent_cfvs_bound);
         card_tools.normalize_range(node.board, current_player_range);
-        std::cout << "current_opponent_cfvs_bound" << std::endl;
-        print(current_opponent_cfvs_bound.slice(0, 0, 20, 1));
+//        std::cout << "current_opponent_cfvs_bound" << std::endl;
+//        print(current_opponent_cfvs_bound.slice(0, 0, 20, 1));
     }
     else if (decision_id == 0) {
         assert (position == constants.players.P1);

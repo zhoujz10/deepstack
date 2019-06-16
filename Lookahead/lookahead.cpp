@@ -477,8 +477,11 @@ void Lookahead::get_chance_action_cfv(const int action_index, const int action, 
 
             if ((action_index == 1 && first_call_transition && layer == 1 && action_id == 1) ||
                 (action_index != 1 && first_call_transition && layer == 2 && parent_id == action_index - 2) ||
-                (!first_call_transition && layer == 2 && parent_id == action_index - 1))
-            cfv.copy_(river_lookahead->cfvs_data_hand_memory[i][board_idx][tree->current_player] / river_lookahead->ranges_data_hand_memory[i][board_idx][0].sum());
+                (!first_call_transition && layer == 2 && parent_id == action_index - 1)) {
+                cfv.copy_(river_lookahead->cfvs_data_hand_memory[i][board_idx][tree->current_player] / river_lookahead->ranges_data_hand_memory[
+                        i][board_idx][0].sum());
+                return;
+            }
         }
     }
 }
