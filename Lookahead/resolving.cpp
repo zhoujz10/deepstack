@@ -41,6 +41,7 @@ vector<int>* Resolving::get_possible_actions() {
     auto possible_actions = new vector<int>;
     for (int i=0; i<lookahead_tree->children->size(); ++i)
         possible_actions->push_back(lookahead_tree->actions[i]);
+    return possible_actions;
 }
 
 torch::Tensor& Resolving::get_root_cfv() {

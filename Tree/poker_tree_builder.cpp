@@ -41,8 +41,8 @@ void PokerTreeBuilder::_get_children_player_node(Node &parent_node, int depth) {
     children->push_back(fold_node);
 
 //    check action
-    if ((parent_node.current_player == constants.players.P1 && (parent_node.bets[0] == parent_node.bets[1]) && parent_node.street != 1) or
-        (parent_node.current_player == constants.players.P2 && (parent_node.bets[0] == ante) &&
+    if ((parent_node.current_player == constants.players.P1 && (parent_node.bets[0] == parent_node.bets[1]) && parent_node.street != 1) ||
+         (parent_node.current_player == constants.players.P2 && (parent_node.bets[0] == ante) &&
          (parent_node.bets[1] == ante / 2 ) && parent_node.street == 1)) {
         Node check_node;
 //        auto check_node = *new Node;

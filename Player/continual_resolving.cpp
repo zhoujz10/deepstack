@@ -70,6 +70,8 @@ void ContinualResolving::_update_invariant(Node& node, ptree& state) {
         assert (last_node->street + 1 == node.street);
         resolving->get_chance_action_cfv(last_bet, node.board, current_opponent_cfvs_bound);
         card_tools.normalize_range(node.board, current_player_range);
+        std::cout << "current_opponent_cfvs_bound" << std::endl;
+        print(current_opponent_cfvs_bound.slice(0, 0, 20, 1));
     }
     else if (decision_id == 0) {
         assert (position == constants.players.P1);
@@ -106,14 +108,17 @@ int ContinualResolving::_sample_bet(Node& node, ptree& state) {
     for (int i=0; i<actions_count; ++i) {
         int action_bet = (*possible_bets)[i];
         resolving->get_action_strategy(action_bet, action_strategy);
-        hand_strategy[i] = action_strategy.data<float>()[hand_id];
+        hand_strategy[i] = (float)action_strategy[hand_id].item<float>();
         hand_strategy_sum += hand_strategy[i];
         hand_strategy_cumsum[i] = hand_strategy_sum;
     }
 
     assert (1 - hand_strategy_sum < 0.001);
 
-    std::cout << "strategy" << hand_strategy << std::endl;
+    std::cout << "strategy";
+    for (int i=0; i<actions_count; ++i)
+        std::cout << hand_strategy[i] << ' ';
+    std::cout << endl;
 
     float r = dice();
     int sampled_bet = 0;

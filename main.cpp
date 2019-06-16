@@ -35,6 +35,7 @@ int main() {
     CardToString& card_to_string = get_card_to_string();
 
     auto card_tools = get_card_tools();
+    get_flop_value();
     get_turn_value();
 
     ContinualResolving continual_resolving;
@@ -42,7 +43,7 @@ int main() {
     HttpServer server;
     server.config.port = 8080;
 
-    server.resource["^/json$"]["POST"] = [&card_to_string, &continual_resolving](shared_ptr<HttpServer::Response> response, shared_ptr<HttpServer::Request> request) {
+    server.resource["^/get_action"]["POST"] = [&card_to_string, &continual_resolving](shared_ptr<HttpServer::Response> response, shared_ptr<HttpServer::Request> request) {
         try {
             ptree pt;
             Node node;
@@ -182,11 +183,11 @@ int main() {
 
 
 
-//    int cards[5] = {  -1, -1, -1, -1, -1 };
-////    int cards[5] = {  5, 45, 11, -1, -1 };
+////    int cards[5] = {  -1, -1, -1, -1, -1 };
+//    int cards[5] = {  5, 45, 11, -1, -1 };
 ////    int cards[5] = {  5, 45, 11, 43, -1 };
 ////    int cards[5] = {  5, 15, 25, 35, -1 };
-//    int bets[2] = { 1000, 1000 };
+//    int bets[2] = { 100, 100 };
 //    Node build_tree_node( cards, bets );
 //    build_tree_node.current_player = constants.players.P1;
 //    torch::Tensor player_range = torch::zeros(hand_count, torch::kFloat32).to(device);
@@ -199,10 +200,6 @@ int main() {
 //    resolving.resolve_first_node(build_tree_node, player_range, opponent_range);
 //
 //    std::cout << resolving.get_root_cfv_both_players() << std::endl;
-
-
-
-
 
 
 

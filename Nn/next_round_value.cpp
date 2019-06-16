@@ -27,7 +27,7 @@ void NextRoundValue::init_bucketing(Board *board_ptr) {
     if (street == 1) {
         auto p = new int32_t[board_count * hand_count];
         read_pointer(p, board_buckets_file);
-        board_buckets = torch::from_blob(p, {board_count, hand_count}, torch::kInt32).to(device) * -1;
+        board_buckets = torch::from_blob(p, {board_count, hand_count}, torch::kInt32).to(device);
         delete[] p;
 
         impossible_mask = torch::lt(board_buckets, 0);
@@ -165,7 +165,7 @@ void NextRoundValue::init_var() {
     aux_next_round_serialized_range.zero_();
     aux_values_per_board.zero_();
     aux_value_normalization.zero_();
-    aux_next_round_inputs.slice(1, aux_bucket_count * constants.players_count, max_size, 1).copy_(pot_sizes.view(-1) / stack);
+    aux_next_round_inputs.slice(1, aux_bucket_count * constants.players_count, max_size, 1).squeeze().copy_(pot_sizes.view(-1) / stack);
 }
 
 void NextRoundValue::get_value_aux(torch::Tensor& ranges, torch::Tensor& values, const int next_board_idx) {
@@ -215,7 +215,7 @@ void NextRoundValue::get_value_aux(torch::Tensor& ranges, torch::Tensor& values,
     if (use_memory) {
         torch::Tensor _next_round_extended_range = next_round_extended_range.view({batch_size * constants.players_count, -1});
         _hand_range_to_bucket_range_on_board(next_board_idx, _ranges, _next_round_extended_range);
-        range_normalization = next_round_serialized_range.slice(1, 0, bucket_count+1, 1).sum(1);
+        range_normalization = next_round_serialized_range.slice(1, 0, bucket_count, 1).sum(1);
         torch::Tensor rnb_view = range_normalization.view({batch_size, constants.players_count});
         for (int player=0; player<constants.players_count; ++player)
             value_normalization.slice(1, player, player+1, 1).copy_(rnb_view.slice(1, 1-player, 2-player, 1));
@@ -353,11 +353,11 @@ void NextRoundValue::_prepare_next_round_values() {
 }
 
 NextRoundValue& get_flop_value() {
-    static NextRoundValue flop_value(1, &get_turn_nn(), &get_aux_nn());
+    static NextRoundValue flop_value(1, &get_flop_nn(), &get_aux_nn());
     return flop_value;
 }
 
 NextRoundValue& get_turn_value() {
-    static NextRoundValue turn_value(2, &get_flop_nn());
+    static NextRoundValue turn_value(2, &get_turn_nn());
     return turn_value;
 }
