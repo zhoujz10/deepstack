@@ -18,6 +18,7 @@ public:
     Lookahead *lookahead = nullptr;
     std::map<std::string, torch::Tensor> resolve_results;
 
+    ~Resolving();
     void resolve_first_node(Node& node, torch::Tensor& player_range, torch::Tensor& opponent_range);
     void resolve(Node& node, torch::Tensor& player_range, torch::Tensor& opponent_cfvs, torch::Tensor& opponent_range_warm_start);
     vector<int>* get_possible_actions();

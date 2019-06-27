@@ -13,6 +13,11 @@ PokerTreeBuilder::PokerTreeBuilder(bool is_next, int river_count, int *river_pot
         , river_count(river_count)
         , river_pots(river_pots) {}
 
+PokerTreeBuilder::~PokerTreeBuilder() {
+    delete root;
+    delete river_pots;
+}
+
 void PokerTreeBuilder::_fill_additional_attributes(Node& node) {
     node.pot = *std::min_element(node.bets, node.bets+2);
 }
@@ -25,7 +30,6 @@ void PokerTreeBuilder::_get_children_player_node(Node &parent_node, int depth) {
 
 //    fold action
     Node fold_node;
-//    auto fold_node = *new Node;
     fold_node.node_type = constants.node_types.terminal_fold;
     fold_node.terminal = true;
     fold_node.current_player = 1 - parent_node.current_player;
@@ -45,7 +49,6 @@ void PokerTreeBuilder::_get_children_player_node(Node &parent_node, int depth) {
          (parent_node.current_player == constants.players.P2 && (parent_node.bets[0] == ante) &&
          (parent_node.bets[1] == ante / 2 ) && parent_node.street == 1)) {
         Node check_node;
-//        auto check_node = *new Node;
         check_node.node_type = constants.node_types.check;
         check_node.terminal = false;
         check_node.current_player = 1 - parent_node.current_player;
@@ -62,11 +65,9 @@ void PokerTreeBuilder::_get_children_player_node(Node &parent_node, int depth) {
 //    transition call
     else if (parent_node.street <= 3 &&
              ((parent_node.bets[0] == parent_node.bets[1]) ||
-              (parent_node.bets[0] != parent_node.bets[1] && *std::max_element(parent_node.bets, parent_node.bets+2) < stack))
+              (parent_node.bets[0] != parent_node.bets[1] && *std::max_element(parent_node.bets, parent_node.bets+2) < params::stack))
             ) {
         Node chance_node;
-//        auto chance_node = *new Node;
-
         chance_node.terminal = false;
         chance_node.node_type = constants.node_types.chance_node;
         chance_node.street = parent_node.street;
@@ -102,7 +103,6 @@ void PokerTreeBuilder::_get_children_player_node(Node &parent_node, int depth) {
     else {
 //        terminal call - either last street or allin
         Node terminal_call_node;
-//        auto terminal_call_node = *new Node;
         terminal_call_node.node_type = constants.node_types.terminal_call;
         terminal_call_node.terminal = true;
         terminal_call_node.current_player = 1 - parent_node.current_player;
@@ -130,7 +130,6 @@ void PokerTreeBuilder::_get_children_player_node(Node &parent_node, int depth) {
     if (!possible_bets.empty()) {
         for (int i=0; i<possible_bets.size(); ++i) {
             Node child;
-//            auto child = *new Node;
             child.terminal = false;
             child.node_type = constants.node_types.inner_node;
             child.parent = &parent_node;
@@ -147,7 +146,7 @@ void PokerTreeBuilder::_get_children_player_node(Node &parent_node, int depth) {
                     for (int j=0; j<river_count; ++j) {
                         int opponent_bet = parent_node.all_river_bets[j][child.current_player];
                         int pot = opponent_bet * 2;
-                        int max_raise_size = stack - opponent_bet;
+                        int max_raise_size = params::stack - opponent_bet;
                         int min_raise_size = opponent_bet - parent_node.all_river_bets[j][parent_node.current_player];
                         min_raise_size = std::max(min_raise_size, ante);
                         min_raise_size = std::min(max_raise_size, min_raise_size);
@@ -159,9 +158,9 @@ void PokerTreeBuilder::_get_children_player_node(Node &parent_node, int depth) {
                 }
                 else {
                     for (int j=0; j<20; ++j)
-                        child.all_river_bets[j][parent_node.current_player] = stack;
+                        child.all_river_bets[j][parent_node.current_player] = params::stack;
                     for (int j=0; j<river_count; ++j)
-                        if (child.all_river_bets[j][child.current_player] == stack)
+                        if (child.all_river_bets[j][child.current_player] == params::stack)
                             child.all_river_valid[j] = false;
                 }
             }
@@ -178,15 +177,12 @@ void PokerTreeBuilder::_get_children_nodes(Node &parent_node, int depth) {
 //    transition call -> create a chance node
     if (parent_node.terminal)
         parent_node.children = new std::vector<Node>;
-//        return new std::vector<Node>;
 //    chance node
     else if (chance_node)
         parent_node.children = new std::vector<Node>;
-//        return new std::vector<Node>;
 //    inner nodes -> handle bet sizes
     else
         _get_children_player_node(parent_node, depth);
-//        return _get_children_player_node(parent_node, depth);
 }
 
 void PokerTreeBuilder::_build_tree_dfs(Node &current_node, int depth) {
@@ -233,7 +229,7 @@ Node* PokerTreeBuilder::build_tree(Node& build_tree_node) {
             memcpy(river_pots_fractions, river_pots_fractions_1, 20 * sizeof(int));
         while (river_count < 20) {
             int river_pot = cur_pot * river_pots_fractions[river_count];
-            if (river_pots_fractions[river_count] > 0 && river_pot < stack) {
+            if (river_pots_fractions[river_count] > 0 && river_pot < params::stack) {
                 root->river_pots[river_count] = river_pot;
                 river_count ++;
             }

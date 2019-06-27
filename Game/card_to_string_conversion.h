@@ -11,6 +11,7 @@
 #include "../Settings/constants.h"
 #include "../Settings/game_settings.h"
 #include "../Game/board.h"
+#include "../runtime_constants.h"
 
 
 class CardToString {
@@ -23,7 +24,8 @@ public:
     int string_to_card(const std::string& card_string);
     void string_to_board(const std::string& card_string, Board& board);
     int string_to_hand(const std::string& card_string);
-
+    std::string card_to_string(int card);
+    std::string hand_to_string(int hand_id);
 };
 
 

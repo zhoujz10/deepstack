@@ -7,6 +7,10 @@
 #include "lookahead.h"
 
 
+LookaheadBuilder::~LookaheadBuilder() {
+//    std::cout << "LookaheadBuilder released." << std::endl;
+}
+
 LookaheadBuilder::LookaheadBuilder(Lookahead *ptr) {
     lookahead = ptr;
     lookahead->ccall_action_index = 0;
@@ -222,7 +226,7 @@ void LookaheadBuilder::construct_data_structures() {
             lookahead->ranges_data[d] = torch::zeros({lookahead->actions_count[d-1], lookahead->bets_count[d-2], lookahead->nonterminal_nonallin_nodes_count[d-2], constants.players_count, hand_count}, torch::kFloat32).to(device);
             lookahead->cfvs_data[d] = lookahead->ranges_data[d].clone();
             lookahead->placeholder_data[d] = lookahead->ranges_data[d].clone();
-            lookahead->pot_size[d] = torch::ones(lookahead->ranges_data[d].sizes(), torch::kFloat32).to(device) * stack;
+            lookahead->pot_size[d] = torch::ones(lookahead->ranges_data[d].sizes(), torch::kFloat32).to(device) * params::stack;
 
             lookahead->average_strategies_data[d] = torch::zeros({lookahead->actions_count[d-1], lookahead->bets_count[d-2], lookahead->nonterminal_nonallin_nodes_count[d-2], hand_count}, torch::kFloat32).to(device);
             lookahead->current_strategy_data[d] = lookahead->average_strategies_data[d].clone();
@@ -409,14 +413,14 @@ void LookaheadBuilder::build_from_tree(Node& tree, const int _river_hand_abstrac
 
     set_datastructures_from_tree_dfs(tree, 0, 0, 0, 0, 0, -100);
 
-    if (tree.street == 3 && *std::max_element(tree.bets, tree.bets+2) < stack) {
+    if (tree.street == 3 && *std::max_element(tree.bets, tree.bets+2) < params::stack) {
         lookahead->river_count = tree.river_count;
         lookahead->river_lookahead = new Lookahead(true);
 
         for (auto pot : lookahead->tree->river_pots) {
             if (pot == 0)
                 break;
-            lookahead->max_depth.push_back((int)ceil(log((double)stack / pot) / log(3)) + 2);
+            lookahead->max_depth.push_back((int)ceil(log((double)params::stack / pot) / log(3)) + 2);
         }
 
         for (int d=4; d<*std::max_element(lookahead->max_depth.begin(), lookahead->max_depth.end())+1; ++d)

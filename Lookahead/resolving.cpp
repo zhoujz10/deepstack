@@ -6,6 +6,14 @@
 #include "resolving.h"
 
 
+Resolving::~Resolving() {
+//    delete &tree_builder;
+//    delete lookahead_tree;
+//    std::cout << "Resolving released." << std::endl;
+    delete lookahead;
+//    delete &resolve_results;
+}
+
 void Resolving::_create_lookahead_tree(Node& node) {
     node.limit_to_street = false;
     lookahead_tree = tree_builder.build_tree(node);

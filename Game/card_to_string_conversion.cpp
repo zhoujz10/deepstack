@@ -50,6 +50,15 @@ int CardToString::string_to_hand(const std::string& card_string) {
     return hand_id;
 }
 
+std::string CardToString::card_to_string(const int card) {
+    assert (0 <= card && card < card_count);
+    return card_to_string_table[card];
+}
+
+std::string CardToString::hand_to_string(const int hand_id) {
+    return card_to_string(first_card[hand_id]) + card_to_string(second_card[hand_id]);
+}
+
 CardToString& get_card_to_string() {
     static CardToString card_to_string;
     return card_to_string;

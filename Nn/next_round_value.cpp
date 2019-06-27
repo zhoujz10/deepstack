@@ -159,30 +159,33 @@ void NextRoundValue::start_computation(torch::Tensor& src_pot_sizes) {
 }
 
 void NextRoundValue::init_var() {
-    aux_next_round_inputs.zero_();
-    aux_next_round_values.zero_();
-    aux_next_round_extended_range.zero_();
-    aux_next_round_serialized_range.zero_();
-    aux_values_per_board.zero_();
-    aux_value_normalization.zero_();
-    aux_next_round_inputs.slice(1, aux_bucket_count * constants.players_count, max_size, 1).squeeze().copy_(pot_sizes.view(-1) / stack);
+    aux_next_round_inputs = torch::zeros({batch_size, (aux_bucket_count * constants.players_count + 1)}, torch::kFloat32).to(device);
+    aux_next_round_values = torch::zeros({batch_size, constants.players_count, aux_bucket_count}, torch::kFloat32).to(device);
+    aux_next_round_extended_range = torch::zeros({batch_size, constants.players_count, aux_bucket_count}, torch::kFloat32).to(device);
+    aux_next_round_serialized_range = aux_next_round_extended_range.view({-1, aux_bucket_count});
+    aux_values_per_board = torch::zeros({batch_size * constants.players_count, hand_count}, torch::kFloat32).to(device);
+    aux_value_normalization = torch::zeros({batch_size, constants.players_count}, torch::kFloat32).to(device);
+    aux_next_round_inputs.slice(1, aux_bucket_count * constants.players_count, max_size, 1).squeeze().copy_(pot_sizes.view(-1) / params::stack);
 }
 
 void NextRoundValue::get_value_aux(torch::Tensor& ranges, torch::Tensor& values, const int next_board_idx) {
 
     assert (ranges.sizes()[0] == batch_size);
     iter ++;
-    if (iter == 0) {
-//        initializing data structures
-        aux_next_round_inputs = torch::zeros({batch_size, (aux_bucket_count * constants.players_count + 1)}, torch::kFloat32).to(device);
-        aux_next_round_values = torch::zeros({batch_size, constants.players_count, aux_bucket_count}, torch::kFloat32).to(device);
-        aux_next_round_extended_range = torch::zeros({batch_size, constants.players_count, aux_bucket_count}, torch::kFloat32).to(device);
-        aux_next_round_serialized_range = aux_next_round_extended_range.view({-1, aux_bucket_count});
-        aux_values_per_board = torch::zeros({batch_size * constants.players_count, hand_count}, torch::kFloat32).to(device);
-        aux_value_normalization = torch::zeros({batch_size, constants.players_count}, torch::kFloat32).to(device);
-//        handling pot feature for the nn
-        aux_next_round_inputs.slice(1, aux_bucket_count * constants.players_count, max_size, 1).squeeze().copy_(pot_sizes.view(-1) / stack);
-    }
+//    if (iter == 0) {
+////        initializing data structures
+//        aux_next_round_inputs = torch::zeros({batch_size, (aux_bucket_count * constants.players_count + 1)}, torch::kFloat32).to(device);
+//        aux_next_round_values = torch::zeros({batch_size, constants.players_count, aux_bucket_count}, torch::kFloat32).to(device);
+//        aux_next_round_extended_range = torch::zeros({batch_size, constants.players_count, aux_bucket_count}, torch::kFloat32).to(device);
+//        aux_next_round_serialized_range = aux_next_round_extended_range.view({-1, aux_bucket_count});
+//        aux_values_per_board = torch::zeros({batch_size * constants.players_count, hand_count}, torch::kFloat32).to(device);
+//        aux_value_normalization = torch::zeros({batch_size, constants.players_count}, torch::kFloat32).to(device);
+////        handling pot feature for the nn
+//        aux_next_round_inputs.slice(1, aux_bucket_count * constants.players_count, max_size, 1).squeeze().copy_(pot_sizes.view(-1) / stack);
+//    }
+
+    if (iter == 0)
+        init_var();
 
     bool use_memory = (iter >= cfr_skip_iters[street]) && next_board_idx > -1;
 
@@ -276,8 +279,8 @@ void NextRoundValue::get_value(torch::Tensor& ranges, torch::Tensor& values) {
         next_round_serialized_range = next_round_extended_range.view({-1, bucket_count});
         value_normalization = torch::zeros({batch_size, constants.players_count, board_count}, torch::kFloat32).to(device);
 //        handling pot feature for the nn
-        next_round_inputs.slice(2, bucket_count * constants.players_count, max_size, 1).squeeze().copy_(
-                pot_sizes.view({-1, 1}).expand({batch_size, board_count}) / stack);
+        next_round_inputs.slice(2, bucket_count * constants.players_count, max_size, 1).squeeze(2).copy_(
+                pot_sizes.view({-1, 1}).expand({batch_size, board_count}) / params::stack);
     }
 
     bool use_memory = (iter >= cfr_skip_iters[street]);
@@ -325,8 +328,7 @@ void NextRoundValue::get_value(torch::Tensor& ranges, torch::Tensor& values) {
 
 void NextRoundValue::get_value_on_board(Board& board, torch::Tensor& values) {
     assert (iter == cfr_iters[street] - 1);
-    int _batch_size = values.sizes()[0];
-    assert (_batch_size == batch_size);
+    assert (values.sizes()[0] == batch_size);
 
     _prepare_next_round_values();
 

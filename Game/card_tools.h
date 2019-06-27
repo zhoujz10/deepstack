@@ -113,7 +113,7 @@ public:
         return get_board_idx_cpp(board.cards[0], board.cards[1], board.cards[2], board.cards[3], board.cards[4]);
     }
 
-    void normalize_range(Board &board, torch::Tensor &range) {
+    void normalize_range(const Board &board, torch::Tensor &range) {
         torch::Tensor tmp = torch::ones(hand_count, torch::kFloat32).to(device);
         get_possible_hand_indexes(board, tmp);
         tmp *= range;

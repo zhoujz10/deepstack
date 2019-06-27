@@ -53,6 +53,15 @@ struct Node {
 
     Node() = default;
 
+    ~Node() {
+//        std::cout << "Node released." << std::endl;
+//        delete river_tree_node;
+//        delete next_street_root;
+//        for (auto& n : *children)
+//            delete &n;
+//        delete actions;
+    }
+
     Node(const Node&) = default;
 
     explicit Node(Board &bd, int *bt = nullptr) {

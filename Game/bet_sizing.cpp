@@ -18,7 +18,7 @@ void get_possible_bets(Node& node, int street, int depth, bool is_next,
     assert (node.bets[current_player] <= opponent_bet);
 
 //    compute min possible raise size
-    int max_raise_size = stack - opponent_bet;
+    int max_raise_size = params::stack - opponent_bet;
     int min_raise_size = opponent_bet - node.bets[current_player];
     min_raise_size = std::max(min_raise_size, ante);
     min_raise_size = std::min(max_raise_size, min_raise_size);
@@ -35,6 +35,10 @@ void get_possible_bets(Node& node, int street, int depth, bool is_next,
         if (node.current_player == constants.players.P2 && (node.bets[0] == ante) && (node.bets[1] == ante / 2) && node.street == 1 && pokermaster) {
             street = 0;
             depth = 1;
+        }
+        else if (node.street == 3 && (float)*std::max_element(node.bets, node.bets+2) / params::stack <= 0.03 && pokermaster) {
+            street = 0;
+            depth = 0;
         }
         else if (is_next || depth >= 2) {
             street = 0;

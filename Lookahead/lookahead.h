@@ -69,6 +69,8 @@ public:
     torch::Tensor cfvs_data_hand_memory;
     torch::Tensor ranges_data_hand_memory;
 
+    torch::Tensor average_opponent_range = torch::zeros(hand_count, torch::kFloat32).to(device);
+
     std::map<int, std::pair<int, int>> term_call_indices;
     int num_term_call_nodes = 0;
     std::map<int, std::pair<int, int>> term_fold_indices;
@@ -107,6 +109,7 @@ public:
     bool first_call_check = false;
 
     explicit Lookahead(bool _is_next=false);
+    ~Lookahead();
     void build_lookahead(Node& _tree);
     void resolve_first_node(torch::Tensor& player_range, torch::Tensor& opponent_range);
     void resolve(torch::Tensor& player_range, torch::Tensor& opponent_cfvs, torch::Tensor& opponent_range_warm_start);
@@ -144,6 +147,7 @@ public:
 
 
     explicit LookaheadBuilder(Lookahead *ptr);
+    ~LookaheadBuilder();
 
     void construct_data_structures();
     void set_datastructures_from_tree_dfs(Node& node, int layer, int action_id, int parent_id,

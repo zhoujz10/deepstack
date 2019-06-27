@@ -6,6 +6,13 @@
 #include "lookahead.h"
 
 
+Lookahead::~Lookahead() {
+    builder->lookahead = nullptr;
+    delete river_lookahead;
+//    std::cout << "Lookahead released." << std::endl;
+    delete builder;
+}
+
 Lookahead::Lookahead(bool _is_next) {
     is_next = _is_next;
     builder = new LookaheadBuilder(this);
@@ -58,7 +65,7 @@ void Lookahead::_compute_current_strategies() {
         current_strategy_data[d].copy_(positive_regrets_data[d] / regrets_sum[d].slice(2, 0, 1, 1).squeeze(2).expand_as(positive_regrets_data[d]));
     }
 
-    if (tree->street == 3 && *std::max_element(tree->bets, tree->bets+2) < stack)
+    if (tree->street == 3 && *std::max_element(tree->bets, tree->bets+2) < params::stack)
         river_lookahead->_compute_current_strategies_next_street();
 }
 
@@ -90,7 +97,7 @@ void Lookahead::_compute_ranges() {
         next_level_ranges.slice(3, acting_player[d], acting_player[d]+1, 1) *= current_strategy_data[d+1].unsqueeze(3);
     }
 
-    if (tree->street == 3 && *std::max_element(tree->bets, tree->bets+2) < stack) {
+    if (tree->street == 3 && *std::max_element(tree->bets, tree->bets+2) < params::stack) {
 
         for (auto& t : next_street_lookahead) {
             auto layer = std::get<0>(t);
@@ -155,38 +162,65 @@ void Lookahead::_compute_update_average_strategies(const int _iter) {
 
 void Lookahead::_compute_terminal_equities_terminal_equity() {
 
-    for (int d=1; d<depth+1; ++d) {
-        if (d>1 or first_call_terminal) {
-            if (tree->street != 4)
-                ranges_data_call.slice(0, term_call_indices[d].first*2, term_call_indices[d].second*2, 1).copy_(
-                        ranges_data[d][1][-1].view({-1, hand_count}));
-            else
-                ranges_data_call.slice(0, term_call_indices[d].first*2, term_call_indices[d].second*2, 1).copy_(
-                        ranges_data[d][1].view({term_call_indices[d].second*2 - term_call_indices[d].first*2, hand_count}));
-        }
-        ranges_data_fold.slice(0, term_fold_indices[d].first*2, term_fold_indices[d].second*2, 1).copy_(
-                ranges_data[d][0].view({term_fold_indices[d].second*2 - term_fold_indices[d].first*2, hand_count}));
-    }
+//    for (int d=1; d<depth+1; ++d) {
+//        if (d>1 or first_call_terminal) {
+//            if (tree->street != 4)
+//                ranges_data_call.slice(0, term_call_indices[d].first*2, term_call_indices[d].second*2, 1).copy_(
+//                        ranges_data[d][1][-1].view({-1, hand_count}));
+//            else
+//                ranges_data_call.slice(0, term_call_indices[d].first*2, term_call_indices[d].second*2, 1).copy_(
+//                        ranges_data[d][1].view({term_call_indices[d].second*2 - term_call_indices[d].first*2, hand_count}));
+//        }
+//        ranges_data_fold.slice(0, term_fold_indices[d].first*2, term_fold_indices[d].second*2, 1).copy_(
+//                ranges_data[d][0].view({term_fold_indices[d].second*2 - term_fold_indices[d].first*2, hand_count}));
+//    }
+//
+//    terminal_equity.call_value(ranges_data_call, cfvs_data_call);
+//    terminal_equity.fold_value(ranges_data_fold, cfvs_data_fold);
+//
+//    for (int d=1; d<depth+1; ++d) {
+//        if (d>1 or first_call_terminal) {
+//            if (tree->street != 4)
+//                cfvs_data[d][1].slice(0, cfvs_data[d].sizes()[1]-1, cfvs_data[d].sizes()[1], 1).copy_(
+//                        cfvs_data_call.slice(0, term_call_indices[d].first*2, term_call_indices[d].second*2, 1).view(
+//                                cfvs_data[d][1].slice(0, cfvs_data[d].sizes()[1]-1, cfvs_data[d].sizes()[1], 1).sizes()));
+//            else
+//                cfvs_data[d][1].copy_(cfvs_data_call.slice(
+//                        0, term_call_indices[d].first*2, term_call_indices[d].second*2, 1).view(cfvs_data[d][1].sizes()));
+//        }
+//        cfvs_data[d][0].copy_(cfvs_data_fold.slice(
+//                0, term_fold_indices[d].first*2, term_fold_indices[d].second*2, 1).view(cfvs_data[d][0].sizes()));
+//
+//        int fold_mutliplier = acting_player[d] * 2 - 1;
+//        cfvs_data[d][0].slice(2, 0, 1, 1) *= fold_mutliplier;
+//        cfvs_data[d][0].slice(2, 1, max_size, 1) *= -fold_mutliplier;
+//    }
 
-    terminal_equity.call_value(ranges_data_call, cfvs_data_call);
-    terminal_equity.fold_value(ranges_data_fold, cfvs_data_fold);
-
     for (int d=1; d<depth+1; ++d) {
-        if (d>1 or first_call_terminal) {
-            if (tree->street != 4)
-                cfvs_data[d][1].slice(0, cfvs_data[d].sizes()[1]-1, cfvs_data[d].sizes()[1], 1).copy_(
-                        cfvs_data_call.slice(0, term_call_indices[d].first*2, term_call_indices[d].second*2, 1).view(
-                                cfvs_data[d][1].slice(0, cfvs_data[d].sizes()[1]-1, cfvs_data[d].sizes()[1], 1).sizes()));
-            else
-                cfvs_data[d][1].copy_(cfvs_data_call.slice(
-                        0, term_call_indices[d].first*2, term_call_indices[d].second*2, 1).view(cfvs_data[d][1].sizes()));
+
+        if (tree->street <= 3) {
+            if (d > 1 || first_call_terminal) {
+                torch::Tensor _ranges_data = ranges_data[d][1][-1].view({-1, hand_count});
+                torch::Tensor _cfvs_data = cfvs_data[d][1][-1].view({-1, hand_count});
+                terminal_equity.call_value(_ranges_data, _cfvs_data);
+            }
         }
-        cfvs_data[d][0].copy_(cfvs_data_fold.slice(
-                0, term_fold_indices[d].first*2, term_fold_indices[d].second*2, 1).view(cfvs_data[d][0].sizes()));
+        else {
+            assert (tree->street == 4);
+            if (d > 1 || first_call_terminal) {
+                torch::Tensor _ranges_data = ranges_data[d][1].view({-1, hand_count});
+                torch::Tensor _cfvs_data = cfvs_data[d][1].view({-1, hand_count});
+                terminal_equity.call_value(_ranges_data, _cfvs_data);
+            }
+        }
 
         int fold_mutliplier = acting_player[d] * 2 - 1;
+
+        torch::Tensor _ranges_data = ranges_data[d][0].view({-1, hand_count});
+        torch::Tensor _cfvs_data = cfvs_data[d][0].view({-1, hand_count});
+        terminal_equity.fold_value(_ranges_data, _cfvs_data);
         cfvs_data[d][0].slice(2, 0, 1, 1) *= fold_mutliplier;
-        cfvs_data[d][0].slice(2, 1, max_size, 1) *= -fold_mutliplier;
+        cfvs_data[d][0].slice(2, 1, 2, 1) *= -fold_mutliplier;
     }
 }
 
@@ -289,7 +323,7 @@ void Lookahead::_compute_terminal_equities_next_street_resolve(const int _iter) 
 }
 
 void Lookahead::_compute_terminal_equities(const int _iter) {
-    if (tree->street == 3 && *std::max_element(tree->bets, tree->bets+2) < stack)
+    if (tree->street == 3 && *std::max_element(tree->bets, tree->bets+2) < params::stack)
         _compute_terminal_equities_next_street_resolve(_iter);
     else if (tree->street < 3)
         _compute_terminal_equities_next_street_box(_iter);
@@ -394,7 +428,7 @@ void Lookahead::_compute_regrets() {
 
         regrets_data[d].clamp_(0, max_number);
     }
-    if (tree->street == 3 && *std::max_element(tree->bets, tree->bets+2) < stack)
+    if (tree->street == 3 && *std::max_element(tree->bets, tree->bets+2) < params::stack)
         river_lookahead->_compute_regrets_next_street();
 }
 
@@ -449,12 +483,19 @@ void Lookahead::get_results(std::map<std::string, torch::Tensor> &out) {
     scaler = scaler * (cfr_iters[tree->street] - cfr_skip_iters[tree->street]);
 
     out["children_cfvs"] /= scaler;
+
+//    if (reconstruction_opponent_cfvs)
+//        out["opponent_range_last_resolve"] = average_opponent_range / (cfr_iters[tree->street] - cfr_skip_iters[tree->street]);
 }
 
 void Lookahead::_set_opponent_starting_range(const int _iter) {
     if (reconstruction_opponent_cfvs) {
         reconstruction_gadget->compute_opponent_range(cfvs_data[0][0][0][0][0], _iter);
         ranges_data[0].slice(3, 1, 2, 1).copy_(reconstruction_gadget->input_opponent_range);
+
+//        if (_iter >= cfr_skip_iters[tree->street]) {
+//            average_opponent_range += reconstruction_gadget->input_opponent_range / reconstruction_gadget->input_opponent_range.sum();
+//        }
     }
 }
 

@@ -30,60 +30,88 @@ using namespace boost::property_tree;
 using HttpServer = SimpleWeb::Server<SimpleWeb::HTTP>;
 
 
-int main() {
+int main(int argc, char* argv[]) {
 
-    CardToString& card_to_string = get_card_to_string();
+//    CardToString& card_to_string = get_card_to_string();
+//
+//    auto card_tools = get_card_tools();
+//    get_flop_value();
+//    get_turn_value();
+//
+//    ContinualResolving continual_resolving;
+//
+//    HttpServer server;
+//    server.config.port = 8080;
+//    if (argc >= 2)
+//        server.config.port = std::atoi(argv[1]);
+//    if (argc >= 3)
+//        params::use_cache = std::atoi(argv[2]);
 
-    auto card_tools = get_card_tools();
-    get_flop_value();
-    get_turn_value();
-
-    ContinualResolving continual_resolving;
-
-    HttpServer server;
-    server.config.port = 8080;
-
-    server.resource["^/get_action"]["POST"] = [&card_to_string, &continual_resolving](shared_ptr<HttpServer::Response> response, shared_ptr<HttpServer::Request> request) {
-        try {
-            ptree pt;
-            Node node;
-            read_json(request->content, pt);
-
-            int rate = pt.get<int>("ante") / ante;
-
-            pt.put<int>("hand_id", card_to_string.string_to_hand(pt.get<string>("hand")));
-
-            node.terminal = false;
-            node.current_player = pt.get<int>("position");
-            node.street = pt.get<int>("street");
-            card_to_string.string_to_board(pt.get<string>("board"), node.board);
-
-            int bets[2] = {pt.get<int>("bet_0") / rate, pt.get<int>("bet_1") / rate};
-            node.set_bets(bets);
-            if (pt.get<int>("new_game"))
-                continual_resolving.start_new_hand(pt);
-
-            int adviced_action = continual_resolving.compute_action(node, pt);
-
-            auto action = std::to_string(adviced_action);
-
-            *response << "HTTP/1.1 200 OK\r\n"
-                      << "Content-Length: " << action.length() << "\r\n\r\n"
-                      << action;
-        }
-        catch (const exception &e) {
-            *response << "HTTP/1.1 400 Bad Request\r\nContent-Length: " << strlen(e.what()) << "\r\n\r\n"
-                      << e.what();
-        }
-    };
-
-    std::cout << "Server ready at port " << server.config.port << "." << std::endl;
-
-    thread server_thread([&server]() {
-        // Start server
-        server.start();
-    });
-    server_thread.join();
+//    server.resource["^/get_action"]["POST"] = [&card_to_string, &continual_resolving](shared_ptr<HttpServer::Response> response, shared_ptr<HttpServer::Request> request) {
+//        try {
+//
+//            auto n = chrono::system_clock::now();
+//            auto m = n.time_since_epoch();
+//            auto diff = std::chrono::duration_cast<std::chrono::milliseconds>(m).count();
+//            auto msecs = diff % 1000;
+//
+//            std::time_t t = std::chrono::system_clock::to_time_t(n);
+//            auto tm_start = std::localtime(&t);
+//            auto start_time = (float)tm_start->tm_sec + (float)msecs / 1000;
+//
+//            ptree pt;
+//            Node node;
+//            read_json(request->content, pt);
+//
+//            int rate = pt.get<int>("ante") / ante;
+//            params::stack = pt.get<int>("stack");
+//
+//            pt.put<int>("hand_id", card_to_string.string_to_hand(pt.get<string>("hand")));
+//
+//            node.terminal = false;
+//            node.current_player = pt.get<int>("position");
+//            node.street = pt.get<int>("street");
+//            card_to_string.string_to_board(pt.get<string>("board"), node.board);
+//
+//            int bets[2] = {pt.get<int>("bet_0") / rate, pt.get<int>("bet_1") / rate};
+//            node.set_bets(bets);
+//            if (pt.get<int>("new_game"))
+//                continual_resolving.start_new_hand(pt);
+//
+//            int adviced_action = continual_resolving.compute_action(node, pt);
+//
+//            auto action = std::to_string(adviced_action);
+//
+//            n = chrono::system_clock::now();
+//            m = n.time_since_epoch();
+//            diff = std::chrono::duration_cast<std::chrono::milliseconds>(m).count();
+//            msecs = diff % 1000;
+//
+//            t = std::chrono::system_clock::to_time_t(n);
+//            auto tm_end = std::localtime(&t);
+//            auto end_time = (float)tm_end->tm_sec + (float)msecs / 1000;
+//            auto computation_time = end_time - start_time;
+//            if (computation_time < 0)
+//                computation_time += 60;
+//            std::cout << "Used time: " << computation_time << " seconds." << std::endl;
+//
+//            *response << "HTTP/1.1 200 OK\r\n"
+//                      << "Content-Length: " << action.length() << "\r\n\r\n"
+//                      << action;
+//        }
+//        catch (const exception &e) {
+//            *response << "HTTP/1.1 400 Bad Request\r\nContent-Length: " << strlen(e.what()) << "\r\n\r\n"
+//                      << e.what();
+//        }
+//    };
+//
+//    std::cout << "Server ready at port " << server.config.port << "." << std::endl;
+//
+//    thread server_thread([&server]() {
+//        // Start server
+//        server.start();
+//    });
+//    server_thread.join();
 
 
 //    int cards[5];
@@ -98,13 +126,13 @@ int main() {
 
 //    clock_t start = clock();
 
-    auto n = chrono::system_clock::now();
-    auto m = n.time_since_epoch();
-    auto diff = std::chrono::duration_cast<std::chrono::milliseconds>(m).count();
-    auto msecs = diff % 1000;
-
-    std::time_t t = std::chrono::system_clock::to_time_t(n);
-    cout << std::put_time(std::localtime(&t), "%Y-%m-%d %H.%M.%S") << "." << msecs << endl;
+//    auto n = chrono::system_clock::now();
+//    auto m = n.time_since_epoch();
+//    auto diff = std::chrono::duration_cast<std::chrono::milliseconds>(m).count();
+//    auto msecs = diff % 1000;
+//
+//    std::time_t t = std::chrono::system_clock::to_time_t(n);
+//    cout << std::put_time(std::localtime(&t), "%Y-%m-%d %H.%M.%S") << "." << msecs << endl;
 
 
 //    auto device = c10::Device(c10::DeviceType::CUDA);
@@ -180,9 +208,6 @@ int main() {
 
 
 
-
-
-
 ////    int cards[5] = {  -1, -1, -1, -1, -1 };
 //    int cards[5] = {  5, 45, 11, -1, -1 };
 ////    int cards[5] = {  5, 45, 11, 43, -1 };
@@ -212,12 +237,12 @@ int main() {
 //    clock_t end = clock();
 //    cout << (double)(end-start)/CLOCKS_PER_SEC << " seconds have been spent." << endl;
 
-    n = chrono::system_clock::now();
-    m = n.time_since_epoch();
-    diff = std::chrono::duration_cast<std::chrono::milliseconds>(m).count();
-    msecs = diff % 1000;
-
-    t = std::chrono::system_clock::to_time_t(n);
-    cout << std::put_time(std::localtime(&t), "%Y-%m-%d %H.%M.%S") << "." << msecs << endl;
+//    n = chrono::system_clock::now();
+//    m = n.time_since_epoch();
+//    diff = std::chrono::duration_cast<std::chrono::milliseconds>(m).count();
+//    msecs = diff % 1000;
+//
+//    t = std::chrono::system_clock::to_time_t(n);
+//    cout << std::put_time(std::localtime(&t), "%Y-%m-%d %H.%M.%S") << "." << msecs << endl;
 
 }
