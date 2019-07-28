@@ -11,8 +11,8 @@
 #include <string>
 #include <torch/torch.h>
 
-static const c10::Device device = c10::Device(c10::DeviceType::CUDA);
-//static const c10::Device device = c10::Device(c10::DeviceType::CPU);
+//static const c10::Device device = c10::Device(c10::DeviceType::CUDA);
+static const c10::Device device = c10::Device(c10::DeviceType::CPU);
 
 static const char *hand_collide_file = "data/hand_collide.bin";
 
@@ -22,20 +22,24 @@ static const char *flop_equity_matrix_dir = "data/equity_matrix_flop/";
 
 static const char *board_buckets_file = "data/board_buckets.bin";
 
-static const char *range_matrix_cache_root_file = "data/range_matrix_cache/";
+static const char *range_matrix_cache_root_file = "/data/range_matrix_cache/";
 
 static const char *canonical_map_turn_file = "data/canonical_map_turn.bin";
 
 static const char *assignments_turn_file = "data/assignments_turn.bin";
 
 static const char *aux_net_file = "data/aux_net.pt";
+//static const char *aux_net_file = "data/aux_net_2.pt";
 
 static const char *flop_net_file = "data/flop_net.pt";
+//static const char *flop_net_file = "data/flop_net_2.pt";
 
 static const char *turn_net_file = "data/turn_net.pt";
+//static const char *turn_net_file = "data/turn_net_2.pt";
 
-static const char *preflop_cache_root_file = "data/preflop_cache_warmstart_new_network_cpp/";
-
+//static const char *preflop_cache_root_file = "/data/preflop_cache_warmstart_new_network_cpp/";
+//static const char *preflop_cache_root_file = "/data/preflop_cache_slumbot_warmstart_new_network_cpp/";
+extern std::string preflop_cache_root_file;
 
 const uint16_t card_hand_collide[52][51] = {
     {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50},
@@ -197,16 +201,17 @@ const float gadget_epsilon = 1.0 / 100000000;
 
 const int boards_count[5] = { 0, 0, 22100, 49, 48 };
 
-const bool pokermaster = false;
+extern bool pokermaster;
 
 const bool warm_start = true;
 
-const float pot_fractions_by_street[5][2][3] = {
-    { {   1, -1, -1 }, { 0.75, 1.25, -1 } },
-    { { 0.5,  1, -1 }, {  0.5,    1,  2 } },
-    { { 0.5,  1, -1 }, {    1,   -1, -1 } },
-    { { 0.5,  1, -1 }, {    1,   -1, -1 } },
-    { { 0.5,  1,  2 }, {  0.5,    1,  2 } },
+const float pot_fractions_by_street[6][2][3] = {
+    { {   1, -1, -1 }, { 0.75,  1.25, -1 } },
+    { { 0.5,  1, -1 }, {  0.5,     1,  2 } },
+    { { 0.5,  1, -1 }, {    1,    -1, -1 } },
+    { { 0.5,  1, -1 }, {    1,    -1, -1 } },
+    { { 0.5,  1,  2 }, {  0.5,     1,  2 } },
+    { {  -1, -1, -1 }, {  0.5, 0.833, -1 } },
 };
 
 const float max_number = 9999999999;
@@ -214,8 +219,8 @@ const float max_number = 9999999999;
 const int max_size = 99999;
 
 const std::default_random_engine generator(clock());
-const std::uniform_real_distribution<float> distribution(0, 1);
 
+const std::uniform_real_distribution<float> distribution(0, 1);
 
 const char suit_table[4] = {'h', 's', 'c', 'd'};
 

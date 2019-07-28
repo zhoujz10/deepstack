@@ -30,6 +30,7 @@ add_executable(deepstack_cpp main.cpp Settings/game_settings.h TerminalEquity/te
         Settings/constants.h io.h runtime.h Tree/poker_tree_builder.h Game/bet_sizing.h Tree/node.h Lookahead/lookahead.h Lookahead/lookahead.cpp
         Tree/poker_tree_builder.cpp Game/bet_sizing.cpp TerminalEquity/terminal_equity.cpp runtime.cpp Lookahead/LookaheadBuilder.cpp
         Game/card_tools.cpp Lookahead/resolving.h Lookahead/resolving.cpp Nn/next_round_value.h Nn/next_round_value.cpp Nn/value_nn.h Nn/value_nn.cpp
-        Lookahead/cfrd_gadget.h Lookahead/cfrd_gadget.cpp Web/server_http.hpp Web/status_code.hpp Web/utility.hpp Player/continual_resolving.cpp Player/continual_resolving.h Game/card_to_string_conversion.h Game/card_to_string_conversion.cpp Settings/game_settings.cpp)
+        Lookahead/cfrd_gadget.h Lookahead/cfrd_gadget.cpp Web/server_http.hpp Web/status_code.hpp Web/utility.hpp Player/continual_resolving.cpp
+        Player/continual_resolving.h Game/card_to_string_conversion.h Game/card_to_string_conversion.cpp Settings/game_settings.cpp Settings/constants.cpp)
 target_link_libraries(deepstack_cpp PUBLIC Boost::system Boost::thread Boost::filesystem ${HYRISE_SQLPARSER} "${TORCH_LIBRARIES}")
 

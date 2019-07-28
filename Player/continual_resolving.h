@@ -61,6 +61,8 @@ public:
     std::map<int, int> stack_match_list;
     std::vector<int> bet_sequence;
 
+    bool rate_resumed = false;
+
 
     CardTools& card_tools = get_card_tools();
     CardToString& card_to_string = get_card_to_string();
@@ -75,10 +77,11 @@ private:
     void _resolve_node(Node& node, ptree& state);
     void _update_invariant(Node& node, ptree& state);
     int _sample_bet(Node& node, ptree& state);
-    bool _load_preflop_cache(Node& node);
+    bool _load_preflop_cache(Node& node, ptree& state);
     void _load_cache_file(const char *s);
+    void _generate_stack_match();
     int _sample_bet_from_cache();
-    void _resolve_node_cache(Node& node);
+    void _resolve_node_cache(Node& node, ptree& state);
     void _update_invariant_cache(Node& node);
     void _generate_file_name(char *s);
 };

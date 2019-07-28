@@ -25,93 +25,180 @@
 #include "Lookahead/resolving.h"
 #include "Player/continual_resolving.h"
 
-
 using namespace boost::property_tree;
 using HttpServer = SimpleWeb::Server<SimpleWeb::HTTP>;
 
 
+class InputParser{
+public:
+    InputParser (int &argc, char **argv) {
+        for (int i=1; i < argc; ++i)
+            this->tokens.push_back(std::string(argv[i]));
+    }
+
+    const std::string& getCmdOption(const std::string &option) const {
+        std::vector<std::string>::const_iterator itr;
+        itr = std::find(this->tokens.begin(), this->tokens.end(), option);
+        if (itr != this->tokens.end() && ++itr != this->tokens.end()){
+            return *itr;
+        }
+        static const std::string empty_string("");
+        return empty_string;
+    }
+
+    bool cmdOptionExists(const std::string &option) const {
+        return std::find(this->tokens.begin(), this->tokens.end(), option)
+               != this->tokens.end();
+    }
+private:
+    std::vector <std::string> tokens;
+};
+
 int main(int argc, char* argv[]) {
 
-//    CardToString& card_to_string = get_card_to_string();
-//
-//    auto card_tools = get_card_tools();
-//    get_flop_value();
-//    get_turn_value();
-//
-//    ContinualResolving continual_resolving;
-//
-//    HttpServer server;
-//    server.config.port = 8080;
-//    if (argc >= 2)
-//        server.config.port = std::atoi(argv[1]);
-//    if (argc >= 3)
-//        params::use_cache = std::atoi(argv[2]);
+    HttpServer server;
+    server.config.port = 8080;
 
-//    server.resource["^/get_action"]["POST"] = [&card_to_string, &continual_resolving](shared_ptr<HttpServer::Response> response, shared_ptr<HttpServer::Request> request) {
-//        try {
-//
-//            auto n = chrono::system_clock::now();
-//            auto m = n.time_since_epoch();
-//            auto diff = std::chrono::duration_cast<std::chrono::milliseconds>(m).count();
-//            auto msecs = diff % 1000;
-//
-//            std::time_t t = std::chrono::system_clock::to_time_t(n);
-//            auto tm_start = std::localtime(&t);
-//            auto start_time = (float)tm_start->tm_sec + (float)msecs / 1000;
-//
-//            ptree pt;
-//            Node node;
-//            read_json(request->content, pt);
-//
-//            int rate = pt.get<int>("ante") / ante;
-//            params::stack = pt.get<int>("stack");
-//
-//            pt.put<int>("hand_id", card_to_string.string_to_hand(pt.get<string>("hand")));
-//
-//            node.terminal = false;
-//            node.current_player = pt.get<int>("position");
-//            node.street = pt.get<int>("street");
-//            card_to_string.string_to_board(pt.get<string>("board"), node.board);
-//
-//            int bets[2] = {pt.get<int>("bet_0") / rate, pt.get<int>("bet_1") / rate};
-//            node.set_bets(bets);
-//            if (pt.get<int>("new_game"))
-//                continual_resolving.start_new_hand(pt);
-//
-//            int adviced_action = continual_resolving.compute_action(node, pt);
-//
-//            auto action = std::to_string(adviced_action);
-//
-//            n = chrono::system_clock::now();
-//            m = n.time_since_epoch();
-//            diff = std::chrono::duration_cast<std::chrono::milliseconds>(m).count();
-//            msecs = diff % 1000;
-//
-//            t = std::chrono::system_clock::to_time_t(n);
-//            auto tm_end = std::localtime(&t);
-//            auto end_time = (float)tm_end->tm_sec + (float)msecs / 1000;
-//            auto computation_time = end_time - start_time;
-//            if (computation_time < 0)
-//                computation_time += 60;
-//            std::cout << "Used time: " << computation_time << " seconds." << std::endl;
-//
-//            *response << "HTTP/1.1 200 OK\r\n"
-//                      << "Content-Length: " << action.length() << "\r\n\r\n"
-//                      << action;
-//        }
-//        catch (const exception &e) {
-//            *response << "HTTP/1.1 400 Bad Request\r\nContent-Length: " << strlen(e.what()) << "\r\n\r\n"
-//                      << e.what();
-//        }
-//    };
-//
-//    std::cout << "Server ready at port " << server.config.port << "." << std::endl;
-//
-//    thread server_thread([&server]() {
-//        // Start server
-//        server.start();
-//    });
-//    server_thread.join();
+    InputParser input(argc, argv);
+
+    if(input.cmdOptionExists("--port")){
+        const std::string &port = input.getCmdOption("--port");
+        server.config.port = std::stoi(port);
+    }
+
+    if(input.cmdOptionExists("--cache")){
+        const std::string &use_cache = input.getCmdOption("--cache");
+        params::use_cache = std::stoi(use_cache);
+    }
+
+    if(input.cmdOptionExists("--ante")){
+        const std::string &_ante = input.getCmdOption("--ante");
+        minimum_ante = std::stoi(_ante);
+        ante = minimum_ante;
+    }
+
+    if(input.cmdOptionExists("--add")){
+        const std::string &additional_ante = input.getCmdOption("--add");
+        params::minimum_additional_ante = std::stoi(additional_ante);
+        params::additional_ante = params::minimum_additional_ante;
+    }
+
+    if(input.cmdOptionExists("--pokermaster")){
+        pokermaster = true;
+    }
+
+    if (pokermaster) {
+        if (params::additional_ante)
+            preflop_cache_root_file = "/data/preflop_cache_warmstart_new_network_addante_cpp/";
+        else
+            preflop_cache_root_file = "/data/preflop_cache_warmstart_new_network_cpp/";
+    }
+
+    CardToString& card_to_string = get_card_to_string();
+
+    auto card_tools = get_card_tools();
+    get_flop_value();
+    get_turn_value();
+
+    ContinualResolving continual_resolving;
+
+    server.resource["^/get_action"]["POST"] = [&card_to_string, &continual_resolving](shared_ptr<HttpServer::Response> response, shared_ptr<HttpServer::Request> request) {
+        try {
+
+            auto n = chrono::system_clock::now();
+            auto m = n.time_since_epoch();
+            auto diff = std::chrono::duration_cast<std::chrono::milliseconds>(m).count();
+            auto msecs = diff % 1000;
+
+            std::time_t t = std::chrono::system_clock::to_time_t(n);
+            auto tm_start = std::localtime(&t);
+            auto start_time = (float)tm_start->tm_sec + (float)msecs / 1000;
+
+            ptree pt;
+            Node node;
+            read_json(request->content, pt);
+            pt.put<int>("hand_id", card_to_string.string_to_hand(pt.get<string>("hand")));
+
+            if (pt.get<int>("new_game")) {
+//                reset game settings
+                ante = minimum_ante;
+                params::additional_ante = params::minimum_additional_ante;
+                params::position = pt.get<int>("position");
+                continual_resolving.start_new_hand(pt);
+            }
+
+            int rate = pt.get<int>("ante") / ante;
+            pt.add("rate", rate);
+            std::cout << "pt_rate: " << pt.get<int>("rate") << std::endl;
+            params::stack = pt.get<int>("stack") / rate;
+
+            node.terminal = false;
+            node.current_player = pt.get<int>("position");
+            node.street = pt.get<int>("street");
+            card_to_string.string_to_board(pt.get<string>("board"), node.board);
+
+            int bets[2];
+
+            if (pt.get<int>("bet_0") % rate == 0 && pt.get<int>("bet_1") % rate == 0) {
+                bets[0] = min(pt.get<int>("bet_0") / rate, params::stack);
+                bets[1] = min(pt.get<int>("bet_1") / rate, params::stack);
+                pt.add("need_rate_resume", false);
+            }
+            else {
+                params::additional_ante *= rate;
+                rate = 1;
+                ante = pt.get<int>("ante");
+                params::stack = pt.get<int>("stack");
+                bets[0] = min(pt.get<int>("bet_0"), params::stack);
+                bets[1] = min(pt.get<int>("bet_1"), params::stack);
+                pt.add("need_rate_resume", true);
+            }
+
+            node.set_bets(bets);
+
+            int adviced_action = continual_resolving.compute_action(node, pt);
+
+            auto action = adviced_action >= 0 ? std::to_string(adviced_action * rate) : std::to_string(adviced_action);
+
+            n = chrono::system_clock::now();
+            m = n.time_since_epoch();
+            diff = std::chrono::duration_cast<std::chrono::milliseconds>(m).count();
+            msecs = diff % 1000;
+
+            t = std::chrono::system_clock::to_time_t(n);
+            auto tm_end = std::localtime(&t);
+            auto end_time = (float)tm_end->tm_sec + (float)msecs / 1000;
+            auto computation_time = end_time - start_time;
+            if (computation_time < 0)
+                computation_time += 60;
+            std::cout << "Used time: " << computation_time << " seconds." << std::endl;
+
+            *response << "HTTP/1.1 200 OK\r\n"
+                      << "Content-Length: " << action.length() << "\r\n\r\n"
+                      << action;
+        }
+        catch (const exception &e) {
+            *response << "HTTP/1.1 400 Bad Request\r\nContent-Length: " << strlen(e.what()) << "\r\n\r\n"
+                      << e.what();
+        }
+    };
+
+    std::cout << "Server ready at port " << server.config.port << "." << std::endl;
+    if (params::use_cache == 1)
+        std::cout << "The algorithm uses preflop cache." << std::endl;
+    else
+        std::cout << "The algorithm does not use preflop cache." << std::endl;
+    std::cout << "The additional ante of the game is " << (float)params::additional_ante / ante << "bb." << std::endl;
+    if (pokermaster)
+        std::cout << "The algorithm is used for pokermaster." << std::endl;
+    else
+        std::cout << "The algorithm is used for slumbot." << std::endl;
+
+    thread server_thread([&server]() {
+        // Start server
+        server.start();
+    });
+    server_thread.join();
 
 
 //    int cards[5];

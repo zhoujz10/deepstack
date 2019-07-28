@@ -34,7 +34,6 @@ void ValueNn::get_value(torch::Tensor& inputs, torch::Tensor& outputs) {
     outputs.copy_(module->forward(_inputs).toTensor());
 }
 
-
 ValueNn& get_aux_nn() {
     static ValueNn aux_net(1);
     return aux_net;

@@ -32,11 +32,18 @@ void get_possible_bets(Node& node, int street, int depth, bool is_next,
     }
     else {
         int fraction_count = 0;
-        if (node.current_player == constants.players.P2 && (node.bets[0] == ante) && (node.bets[1] == ante / 2) && node.street == 1 && pokermaster) {
-            street = 0;
-            depth = 1;
+        if (node.current_player == constants.players.P2 && (node.bets[0] == ante+params::additional_ante) &&
+        (node.bets[1] == ante / 2+params::additional_ante) && node.street == 1 && pokermaster && params::position == 1) {
+            if (params::additional_ante == 0) {
+                street = 0;
+                depth = 1;
+            }
+            else {  // additional ante = 1
+                street = 5;
+                depth = 1;
+            }
         }
-        else if (node.street == 3 && (float)*std::max_element(node.bets, node.bets+2) / params::stack <= 0.03 && pokermaster) {
+        else if (node.street == 3 && ((float)*std::max_element(node.bets, node.bets+2) / params::stack <= 0.03) && pokermaster) {
             street = 0;
             depth = 0;
         }
@@ -60,7 +67,7 @@ void get_possible_bets(Node& node, int street, int depth, bool is_next,
         int used_bets_count = -1;
 //        try all pot fractions bet and see if we can use them
         for (int fraction_idx = 0; fraction_idx < fraction_count; ++fraction_idx) {
-            int raise_size = (int)(pot * pot_fractions_by_street[street][depth][fraction_idx]);
+            int raise_size = (int)round(pot * pot_fractions_by_street[street][depth][fraction_idx]);
             if (min_raise_size <= raise_size && raise_size < max_raise_size) {
                 used_bets_count ++;
                 possible_bets[used_bets_count][current_player] = opponent_bet + raise_size;

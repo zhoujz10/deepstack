@@ -52,12 +52,21 @@ void NextRoundValue::init_bucketing(Board *board_ptr) {
         int card_2 = *max_element(board_ptr->cards, board_ptr->cards+3);
         int card_1 = board_ptr->cards[0] + board_ptr->cards[1] + board_ptr->cards[2] - card_0 - card_2;
         char range_matrix_cache_file[50];
-        sprintf(range_matrix_cache_file, "%s%d_%d_%d.bin", range_matrix_cache_root_file, card_0, card_1, card_2);
+        sprintf(range_matrix_cache_file, "%s%d_%d_%d.npy", range_matrix_cache_root_file, card_0, card_1, card_2);
         if (access(range_matrix_cache_file, 0) == 0) {
-            auto p = new uint8_t[hand_count * board_count * bucket_count];
-            read_pointer(p, range_matrix_cache_file);
-            _range_matrix_board_view = torch::from_blob(p, {hand_count, board_count, bucket_count}, torch::kUInt8).to(device).to(torch::kFloat32);
+            unsigned npy_shift = 128;
+            auto p = new uint8_t[hand_count * board_count * bucket_count + npy_shift];
+            ifstream f_read(range_matrix_cache_file, ios::binary);
+            f_read.read( reinterpret_cast<char *>(&p[0]), (uint64_t)hand_count * board_count * bucket_count * sizeof(uint8_t) + npy_shift );
+            _range_matrix_board_view = torch::from_blob(p+npy_shift, {hand_count, board_count, bucket_count}, torch::kUInt8).to(device).to(torch::kFloat32);
             _range_matrix = _range_matrix_board_view.view({hand_count, board_count * bucket_count});
+
+//            char temp_file[50];
+//            sprintf(temp_file, "temp_%d_%d_%d.npy", card_0, card_1, card_2);
+//            write_pointer(p+npy_shift, temp_file, (uint32_t)hand_count * board_count * bucket_count);
+
+            delete[] p;
+            std::cout << "range matrix cache file read." << std::endl;
         }
         else {
             _range_matrix = torch::zeros({hand_count, board_count * bucket_count}, torch::kFloat32).to(device);

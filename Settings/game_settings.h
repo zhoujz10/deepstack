@@ -5,13 +5,18 @@
 namespace params {
     extern int stack;
     extern int use_cache;
+    extern int minimum_additional_ante;
+    extern int additional_ante;
+    extern int position;
 }
+
+extern int ante;
+
+extern int minimum_ante;
 
 const bool gpu = false;
 
 const int streets_count = 4;
-
-const int ante = 100;
 
 const int cfr_iters[5] = {-1, 1000, 1000, 1000, 2000};
 

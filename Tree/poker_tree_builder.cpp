@@ -151,8 +151,8 @@ void PokerTreeBuilder::_get_children_player_node(Node &parent_node, int depth) {
                         min_raise_size = std::max(min_raise_size, ante);
                         min_raise_size = std::min(max_raise_size, min_raise_size);
 
-                        child.all_river_bets[j][parent_node.current_player] = opponent_bet + (int)(pot * used_pot_fractions[i]);
-                        if ((int)(pot * used_pot_fractions[i]) >= max_raise_size || (int)(pot * used_pot_fractions[i]) < min_raise_size)
+                        child.all_river_bets[j][parent_node.current_player] = opponent_bet + (int)round(pot * used_pot_fractions[i]);
+                        if ((int)round(pot * used_pot_fractions[i]) >= max_raise_size || (int)round(pot * used_pot_fractions[i]) < min_raise_size)
                             child.all_river_valid[j] = false;
                     }
                 }

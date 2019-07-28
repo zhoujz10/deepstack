@@ -9,11 +9,14 @@ ContinualResolving::ContinualResolving() {
     Board board;
     card_tools.get_uniform_range(board, starting_player_range);
     resolve_first_node();
+
+    if (params::use_cache)
+        _generate_stack_match();
 }
 
 void ContinualResolving::resolve_first_node() {
     int cards[5] = {-1, -1, -1, -1, -1};
-    int bets[2] = { ante, ante/2 };
+    int bets[2] = { ante+params::additional_ante, ante/2+params::additional_ante };
     Node node(cards, bets);
     node.current_player = constants.players.P2;
 
@@ -44,9 +47,17 @@ void ContinualResolving::start_new_hand(ptree& state) {
     position = state.get<int>("position");
     hand_id = state.get<int>("hand_id");
     std::vector<int>().swap(bet_sequence);
+    match = true;
+    prev_match = true;
+    rate_resumed = false;
 }
 
 void ContinualResolving::_resolve_node(Node &node, ptree &state) {
+    if (pokermaster && (decision_id == 0)) {
+        resolve_first_node();
+        rate_resumed = true;
+    }
+
     if (decision_id == 0 && position == constants.players.P2) {
 //    the strategy computation for the first decision node has been already set up
         current_player_range.copy_(starting_player_range);
@@ -62,6 +73,10 @@ void ContinualResolving::_resolve_node(Node &node, ptree &state) {
             delete resolving;
         }
         resolving = new Resolving();
+        if (!rate_resumed) {
+            rate_resumed = true;
+            current_opponent_cfvs_bound *= state.get<int>("rate");
+        }
         resolving->resolve(node, current_player_range, current_opponent_cfvs_bound, opponent_range_warm_start);
 //        opponent_range_warm_start.copy_(resolving->resolve_results["opponent_range_last_resolve"]);
     }
@@ -87,19 +102,23 @@ void ContinualResolving::_update_invariant(Node& node, ptree& state) {
 
 int ContinualResolving::compute_action(Node& node, ptree& state) {
 
-    int sampled_bet = -10;
+    int sampled_bet;
 
     if (params::use_cache) {
-        if (_load_preflop_cache(node)) {
+        if (_load_preflop_cache(node, state)) {
             std::cout << "-----------match-----------" << std::endl;
             last_node = new Node();
             sampled_bet = _sample_bet_from_cache();
             last_bet = sampled_bet;
+            bet_sequence.push_back(sampled_bet);
         }
         else {
             if (prev_match && decision_id > 0) {
                 std::cout << "--------prev match---------" << std::endl;
-                _resolve_node_cache(node);
+//                ante = state.get<int>("ante");
+//                params::stack = state.get<int>("stack");
+//                resume_rate(state.get<int>("ante") / ante);
+                _resolve_node_cache(node, state);
             }
             else {
                 std::cout << "---------not match---------" << std::endl;
@@ -141,7 +160,7 @@ int ContinualResolving::_sample_bet(Node& node, ptree& state) {
 
     assert (1 - hand_strategy_sum < 0.001);
 
-    std::cout << "strategy";
+    std::cout << "strategy: ";
     for (int i=0; i<actions_count; ++i)
         std::cout << hand_strategy[i] << ' ';
     std::cout << endl;
@@ -173,28 +192,28 @@ int ContinualResolving::_sample_bet(Node& node, ptree& state) {
     return sampled_bet;
 }
 
-bool ContinualResolving::_load_preflop_cache(Node& node) {
+bool ContinualResolving::_load_preflop_cache(Node& node, ptree& state) {
     prev_match = match;
-    if (!match)
+    if (!match || state.get<bool>("need_rate_resume"))
         return false;
     if (node.street > 1) {
         match = false;
         return false;
     }
-    match_stack = stack_match_list[params::stack];
-    if (match_stack == 0) {
+    if (stack_match_list.find(params::stack) == stack_match_list.end()) {
         match = false;
         return false;
     }
+    match_stack = stack_match_list[params::stack];
     char cache_file[200];
     if (position != 1 || decision_id != 0)
         bet_sequence.push_back(*std::max_element(node.bets, node.bets+2));
     _generate_file_name(cache_file);
-    _load_cache_file(cache_file);
     if (cache_file[0] == '\0') {
         match = false;
         return false;
     }
+    _load_cache_file(cache_file);
     return true;
 }
 
@@ -206,13 +225,15 @@ void ContinualResolving::_load_cache_file(const char *s) {
     auto *actions = new int32_t[num_actions];
     f_read.read( reinterpret_cast<char *>(&actions[0]), (uint64_t)num_actions*sizeof(int32_t) );
     std::vector<int>().swap(*possible_bets_cache);
-    for (int i=0; i<num_actions; ++i)
+    for (int i=0; i<num_actions; ++i) {
         possible_bets_cache->push_back(actions[i]);
+//        std::cout << actions[i] << std::endl;
+    }
 
     if (num_pot_sizes > 0) {
         auto *pot_sizes = new int32_t[num_pot_sizes];
         f_read.read( reinterpret_cast<char *>(&pot_sizes[0]), (uint64_t)num_pot_sizes*sizeof(int32_t) );
-        pot_sizes_cache = torch::from_blob(pot_sizes, {num_pot_sizes}, torch::kInt32).to(device);
+        pot_sizes_cache = torch::from_blob(pot_sizes, {num_pot_sizes}, torch::kInt32).to(torch::kFloat32).to(device);
 
         auto *inputs_memory = new float[(cfr_iters[1] - cfr_skip_iters[1]) * num_pot_sizes * player_count * hand_count];
         f_read.read( reinterpret_cast<char *>(&inputs_memory[0]), (uint64_t)(cfr_iters[1] - cfr_skip_iters[1]) * num_pot_sizes * player_count * hand_count * sizeof(float));
@@ -232,6 +253,25 @@ void ContinualResolving::_load_cache_file(const char *s) {
     children_cfvs_cache = torch::from_blob(children_cfvs, {num_actions, hand_count}, torch::kFloat32).to(device);
 
     f_read.close();
+
+    delete[] actions;
+    delete[] _current_player_range;
+    delete[] strategy;
+    delete[] children_cfvs;
+}
+
+void ContinualResolving::_generate_stack_match() {
+
+    for (int stack=0; stack<601; ++stack) {
+        for ( int ds : { 0, -1, 1, -2, 2 } ) {
+            char stack_path[100];
+            sprintf(stack_path, "%spreflop_cache_%d/", preflop_cache_root_file.c_str(), stack+ds);
+            if (access(stack_path, 0) == 0) {
+                stack_match_list[stack] = stack+ds;
+                break;
+            }
+        }
+    }
 }
 
 int ContinualResolving::_sample_bet_from_cache() {
@@ -241,19 +281,15 @@ int ContinualResolving::_sample_bet_from_cache() {
     float hand_strategy_cumsum[actions_count];
     float hand_strategy_sum = 0;
 
-    torch::Tensor action_strategy = torch::zeros(hand_count, torch::kFloat32).to(device);
-
     for (int i=0; i<actions_count; ++i) {
-        int action_bet = (*possible_bets_cache)[i];
-        resolving->get_action_strategy(action_bet, action_strategy);
-        hand_strategy[i] = (float)action_strategy[hand_id].item<float>();
+        hand_strategy[i] = strategy_cache[i][hand_id].item<float>();
         hand_strategy_sum += hand_strategy[i];
         hand_strategy_cumsum[i] = hand_strategy_sum;
     }
 
     assert (1 - hand_strategy_sum < 0.001);
 
-    std::cout << "strategy";
+    std::cout << "strategy: ";
     for (int i=0; i<actions_count; ++i)
         std::cout << hand_strategy[i] << ' ';
     std::cout << endl;
@@ -261,25 +297,23 @@ int ContinualResolving::_sample_bet_from_cache() {
     float r = dice();
     int sampled_bet = 0;
 
-    int i = 0;
-    for (i=0; i<actions_count; ++i) {
+    for (int i=0; i<actions_count; ++i) {
         if (hand_strategy_cumsum[i] >= r) {
             sampled_bet = (*possible_bets_cache)[i];
             sampled_action_id_cache = i;
             break;
         }
     }
-    std::cout << "playing action that has prob: " << hand_strategy[i] << std::endl;
+    std::cout << "playing action that has prob: " << hand_strategy[sampled_action_id_cache] << std::endl;
 
     current_opponent_cfvs_bound.copy_(children_cfvs_cache[sampled_action_id_cache]);
-    action_strategy.copy_(strategy_cache[sampled_action_id_cache]);
-    current_player_range *= action_strategy;
+    current_player_range *= strategy_cache[sampled_action_id_cache];
     card_tools.normalize_range(Board(), current_player_range);
 
     return sampled_bet;
 }
 
-void ContinualResolving::_resolve_node_cache(Node& node) {
+void ContinualResolving::_resolve_node_cache(Node& node, ptree &state) {
     if (decision_id == 0 && position == constants.players.P2) {
         current_player_range = starting_player_range.clone();
         resolving = first_node_resolving;
@@ -288,6 +322,10 @@ void ContinualResolving::_resolve_node_cache(Node& node) {
         _update_invariant_cache(node);
         delete resolving;
         resolving = new Resolving();
+        if (!rate_resumed) {
+            rate_resumed = true;
+            current_opponent_cfvs_bound *= state.get<int>("rate");
+        }
         resolving->resolve(node, current_player_range, current_opponent_cfvs_bound, opponent_range_warm_start);
     }
 }
@@ -301,14 +339,14 @@ void ContinualResolving::_update_invariant_cache(Node& node) {
         next_street_boxes.init_var();
         next_street_boxes.iter = cfr_skip_iters[1] - 1;
         torch::Tensor box_outputs = torch::zeros({num_pot_sizes, constants.players_count, hand_count}, torch::kFloat32).to(device);
-        torch::Tensor inputs_memory_cache_slice;
         for (int i=0; i<cfr_iters[1] - cfr_skip_iters[1]; ++i) {
-            inputs_memory_cache_slice = inputs_memory_cache[i];
+            torch::Tensor inputs_memory_cache_slice = inputs_memory_cache[i];
             next_street_boxes.get_value_aux(inputs_memory_cache_slice, box_outputs, board_idx);
         }
         int batch_index = sampled_action_id_cache - 1;
         torch::Tensor pot_mult = pot_sizes_cache[batch_index];
         next_street_boxes.get_value_on_board(node.board, box_outputs);
+//        print(box_outputs[0][0]);
         current_opponent_cfvs_bound = box_outputs[batch_index][1-position];
         current_opponent_cfvs_bound *= pot_mult;
         card_tools.normalize_range(node.board, current_player_range);
@@ -320,19 +358,25 @@ void ContinualResolving::_update_invariant_cache(Node& node) {
 void ContinualResolving::_generate_file_name(char *s) {
 
     std::string hand_string(preflop_cache_root_file);
-    hand_string.append("preflop_cache_%d/", match_stack);
+    hand_string.append("preflop_cache_");
+    hand_string.append(std::to_string(match_stack));
+    hand_string.append("/");
     if ((position == 1 && bet_sequence.empty()) || (position == 0 && bet_sequence.size() == 1))
         hand_string.append("any");
     else {
         int hand_id_cache = abstraction2hand[street_1_abstraction[hand_id]];
         hand_string.append(card_to_string.hand_to_string(hand_id_cache));
     }
+    hand_string.append("_");
     hand_string.append(std::to_string(match_stack));
+    hand_string.append("_");
     hand_string.append(std::to_string(position));
+    hand_string.append("_");
     auto tostr = static_cast<std::string(*)(int)>(std::to_string);
     hand_string.append(boost::algorithm::join(bet_sequence | boost::adaptors::transformed(tostr), ","));
     std::string s_0 = hand_string + "_0.bin";
     std::string s_1 = hand_string + "_1.bin";
+//    std::cout << s_0 << std::endl << s_1 << std::endl;
     if (access(s_0.c_str(), 0) == 0)
         strcpy(s, s_0.c_str());
     else if (access(s_1.c_str(), 0) == 0)
