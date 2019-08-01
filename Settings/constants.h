@@ -37,8 +37,12 @@ static const char *flop_net_file = "data/flop_net.pt";
 static const char *turn_net_file = "data/turn_net.pt";
 //static const char *turn_net_file = "data/turn_net_2.pt";
 
-//static const char *preflop_cache_root_file = "/data/preflop_cache_warmstart_new_network_cpp/";
-//static const char *preflop_cache_root_file = "/data/preflop_cache_slumbot_warmstart_new_network_cpp/";
+static const char *preflop_cache_root_file_slumbot = "/data/preflop_cache_slumbot_warmstart_new_network_cpp/";
+
+static const char *preflop_cache_root_file_pokermaster = "/data/preflop_cache_warmstart_new_network_cpp/";
+
+static const char *preflop_cache_root_file_pokermaster_addante = "/data/preflop_cache_warmstart_new_network_addante_cpp/";
+
 extern std::string preflop_cache_root_file;
 
 const uint16_t card_hand_collide[52][51] = {
@@ -211,7 +215,7 @@ const float pot_fractions_by_street[6][2][3] = {
     { { 0.5,  1, -1 }, {    1,    -1, -1 } },
     { { 0.5,  1, -1 }, {    1,    -1, -1 } },
     { { 0.5,  1,  2 }, {  0.5,     1,  2 } },
-    { {  -1, -1, -1 }, {  0.5, 0.833, -1 } },
+    { { 0.6,  1, -1 }, {  0.5, 0.833, -1 } },
 };
 
 const float max_number = 9999999999;

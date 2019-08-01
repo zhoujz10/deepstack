@@ -38,7 +38,11 @@ void get_possible_bets(Node& node, int street, int depth, bool is_next,
                 street = 0;
                 depth = 1;
             }
-            else {  // additional ante = 1
+            else if (minimum_ante / params::minimum_additional_ante == 4) {  // additional ante = 0.25 * ante
+                street = 5;
+                depth = 0;
+            }
+            else {  // additional ante = 0.5 * ante
                 street = 5;
                 depth = 1;
             }

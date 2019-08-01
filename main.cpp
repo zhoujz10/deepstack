@@ -88,10 +88,15 @@ int main(int argc, char* argv[]) {
     }
 
     if (pokermaster) {
-        if (params::additional_ante)
-            preflop_cache_root_file = "/data/preflop_cache_warmstart_new_network_addante_cpp/";
+        if (params::additional_ante) {
+            preflop_cache_root_file = preflop_cache_root_file_pokermaster_addante;
+            preflop_cache_root_file += "_";
+            preflop_cache_root_file += std::to_string(minimum_ante);
+            preflop_cache_root_file += "_";
+            preflop_cache_root_file += std::to_string(params::minimum_additional_ante);
+        }
         else
-            preflop_cache_root_file = "/data/preflop_cache_warmstart_new_network_cpp/";
+            preflop_cache_root_file = preflop_cache_root_file_pokermaster;
     }
 
     CardToString& card_to_string = get_card_to_string();
