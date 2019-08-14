@@ -17,3 +17,5 @@ int params::position = 0;
 int ante = 2;
 
 int minimum_ante = 2;
+
+int rate = 1;

@@ -11,8 +11,8 @@
 #include <string>
 #include <torch/torch.h>
 
-//static const c10::Device device = c10::Device(c10::DeviceType::CUDA);
-static const c10::Device device = c10::Device(c10::DeviceType::CPU);
+static const c10::Device device = c10::Device(c10::DeviceType::CUDA);
+//static const c10::Device device = c10::Device(c10::DeviceType::CPU);
 
 static const char *hand_collide_file = "data/hand_collide.bin";
 
@@ -41,7 +41,7 @@ static const char *preflop_cache_root_file_slumbot = "/data/preflop_cache_slumbo
 
 static const char *preflop_cache_root_file_pokermaster = "/data/preflop_cache_warmstart_new_network_cpp/";
 
-static const char *preflop_cache_root_file_pokermaster_addante = "/data/preflop_cache_warmstart_new_network_addante_cpp/";
+static const char *preflop_cache_root_file_pokermaster_addante = "/data/preflop_cache_warmstart_new_network_addante_cpp";
 
 extern std::string preflop_cache_root_file;
 
@@ -199,6 +199,10 @@ const int river_pots_fractions_05[20] = {1, 2, 3, 3, 6, 9, 9, 18, 27, 27, 54, 81
 
 const int river_pots_fractions_1[20] = {1, 2, 3, 6, 9, 18, 27, 54, 81, 162, 243, 486, 0, 0, 0, 0, 0, 0, 0, 0};
 
+const int river_pots_fractions_05_s[20] = {1, 3, 3, 9, 9, 27, 27, 81, 81, 243, 243, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+
+const int river_pots_fractions_1_s[20] = {1, 3, 9, 27, 81, 243, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+
 const float regret_epsilon = 1.0 / 1000000000;
 
 const float gadget_epsilon = 1.0 / 100000000;
@@ -209,13 +213,14 @@ extern bool pokermaster;
 
 const bool warm_start = true;
 
-const float pot_fractions_by_street[6][2][3] = {
-    { {   1, -1, -1 }, { 0.75,  1.25, -1 } },
-    { { 0.5,  1, -1 }, {  0.5,     1,  2 } },
-    { { 0.5,  1, -1 }, {    1,    -1, -1 } },
-    { { 0.5,  1, -1 }, {    1,    -1, -1 } },
-    { { 0.5,  1,  2 }, {  0.5,     1,  2 } },
-    { { 0.6,  1, -1 }, {  0.5, 0.833, -1 } },
+const float pot_fractions_by_street[7][2][3] = {
+    { {   1, -1,  -1 }, { 0.75,  1.25, -1 } },
+    { { 0.5,  1,  -1 }, {  0.5,     1,  2 } },
+    { { 0.5,  1,  -1 }, {    1,    -1, -1 } },
+    { { 0.5,  1,  -1 }, {    1,    -1, -1 } },
+    { { 0.5,  1,   2 }, {  0.5,     1,  2 } },
+    { { 0.6,  1,  -1 }, {  0.5, 0.833, -1 } },
+    { { 0.5,  1, 1.5 }, {   -1,    -1, -1 } },
 };
 
 const float max_number = 9999999999;

@@ -54,6 +54,10 @@ void ContinualResolving::start_new_hand(ptree& state) {
 
 void ContinualResolving::_resolve_node(Node &node, ptree &state) {
     if (pokermaster && (decision_id == 0)) {
+        ante *= state.get<int>("rate");
+        params::additional_ante *= state.get<int>("rate");
+        params::stack = state.get<int>("stack");
+        rate = 1;
         resolve_first_node();
         rate_resumed = true;
     }
@@ -72,11 +76,14 @@ void ContinualResolving::_resolve_node(Node &node, ptree &state) {
         if (resolving != first_node_resolving) {
             delete resolving;
         }
-        resolving = new Resolving();
-        if (!rate_resumed) {
+        if (pokermaster && !rate_resumed && state.get<bool>("need_rate_resume")) {
+            ante *= state.get<int>("rate");
+            params::additional_ante *= state.get<int>("rate");
+            params::stack = state.get<int>("stack");
             rate_resumed = true;
             current_opponent_cfvs_bound *= state.get<int>("rate");
         }
+        resolving = new Resolving();
         resolving->resolve(node, current_player_range, current_opponent_cfvs_bound, opponent_range_warm_start);
 //        opponent_range_warm_start.copy_(resolving->resolve_results["opponent_range_last_resolve"]);
     }
@@ -107,6 +114,8 @@ int ContinualResolving::compute_action(Node& node, ptree& state) {
     if (params::use_cache) {
         if (_load_preflop_cache(node, state)) {
             std::cout << "-----------match-----------" << std::endl;
+            if (node.current_player == 0)
+                usleep(500000);
             last_node = new Node();
             sampled_bet = _sample_bet_from_cache();
             last_bet = sampled_bet;
@@ -115,9 +124,6 @@ int ContinualResolving::compute_action(Node& node, ptree& state) {
         else {
             if (prev_match && decision_id > 0) {
                 std::cout << "--------prev match---------" << std::endl;
-//                ante = state.get<int>("ante");
-//                params::stack = state.get<int>("stack");
-//                resume_rate(state.get<int>("ante") / ante);
                 _resolve_node_cache(node, state);
             }
             else {
@@ -194,16 +200,20 @@ int ContinualResolving::_sample_bet(Node& node, ptree& state) {
 
 bool ContinualResolving::_load_preflop_cache(Node& node, ptree& state) {
     prev_match = match;
+//    std::cout << "aaa" << std::endl;
     if (!match || state.get<bool>("need_rate_resume"))
         return false;
+//    std::cout << "bbb" << std::endl;
     if (node.street > 1) {
         match = false;
         return false;
     }
+//    std::cout << "ccc" << params::stack << std::endl;
     if (stack_match_list.find(params::stack) == stack_match_list.end()) {
         match = false;
         return false;
     }
+//    std::cout << "ddd" << std::endl;
     match_stack = stack_match_list[params::stack];
     char cache_file[200];
     if (position != 1 || decision_id != 0)
@@ -213,6 +223,7 @@ bool ContinualResolving::_load_preflop_cache(Node& node, ptree& state) {
         match = false;
         return false;
     }
+//    std::cout << "eee" << std::endl;
     _load_cache_file(cache_file);
     return true;
 }
@@ -262,7 +273,7 @@ void ContinualResolving::_load_cache_file(const char *s) {
 
 void ContinualResolving::_generate_stack_match() {
 
-    for (int stack=0; stack<601; ++stack) {
+    for (int stack=0; stack<1201; ++stack) {
         for ( int ds : { 0, -1, 1, -2, 2 } ) {
             char stack_path[100];
             sprintf(stack_path, "%spreflop_cache_%d/", preflop_cache_root_file.c_str(), stack+ds);
@@ -321,11 +332,14 @@ void ContinualResolving::_resolve_node_cache(Node& node, ptree &state) {
     else {
         _update_invariant_cache(node);
         delete resolving;
-        resolving = new Resolving();
-        if (!rate_resumed) {
+        if (pokermaster && !rate_resumed && state.get<bool>("need_rate_resume")) {
+            ante *= state.get<int>("rate");
+            params::additional_ante *= state.get<int>("rate");
+            params::stack = state.get<int>("stack");
             rate_resumed = true;
             current_opponent_cfvs_bound *= state.get<int>("rate");
         }
+        resolving = new Resolving();
         resolving->resolve(node, current_player_range, current_opponent_cfvs_bound, opponent_range_warm_start);
     }
 }

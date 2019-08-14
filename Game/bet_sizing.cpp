@@ -47,13 +47,16 @@ void get_possible_bets(Node& node, int street, int depth, bool is_next,
                 depth = 1;
             }
         }
-        else if (node.street == 3 && ((float)*std::max_element(node.bets, node.bets+2) / params::stack <= 0.03) && pokermaster) {
+        else if (depth == 0 && node.street == 3 && ((float)*std::max_element(node.bets, node.bets+2) / params::stack <= 0.03) && pokermaster) {
             street = 0;
             depth = 0;
         }
         else if (is_next || depth >= 2) {
             street = 0;
             depth = 0;
+        }
+        else if (pokermaster && street == 4 && depth == 0) {
+            street = 6;
         }
         for (int idx=0; idx<3; ++idx) {
             if (pot_fractions_by_street[street][depth][idx] < 0)

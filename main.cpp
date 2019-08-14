@@ -83,9 +83,17 @@ int main(int argc, char* argv[]) {
         params::additional_ante = params::minimum_additional_ante;
     }
 
-    if(input.cmdOptionExists("--pokermaster")){
-        pokermaster = true;
-    }
+    pokermaster = input.cmdOptionExists("--pokermaster");
+
+
+//    used to debug
+//    params::use_cache = 0;
+//    minimum_ante = 4;
+//    ante = 4;
+//    params::minimum_additional_ante = 2;
+//    params::additional_ante = 2;
+//    pokermaster = true;
+
 
     if (pokermaster) {
         if (params::additional_ante) {
@@ -94,10 +102,12 @@ int main(int argc, char* argv[]) {
             preflop_cache_root_file += std::to_string(minimum_ante);
             preflop_cache_root_file += "_";
             preflop_cache_root_file += std::to_string(params::minimum_additional_ante);
+            preflop_cache_root_file += "/";
         }
         else
             preflop_cache_root_file = preflop_cache_root_file_pokermaster;
     }
+    std::cout << preflop_cache_root_file << std::endl;
 
     CardToString& card_to_string = get_card_to_string();
 
@@ -132,7 +142,7 @@ int main(int argc, char* argv[]) {
                 continual_resolving.start_new_hand(pt);
             }
 
-            int rate = pt.get<int>("ante") / ante;
+            rate = pt.get<int>("ante") / ante;
             pt.add("rate", rate);
             std::cout << "pt_rate: " << pt.get<int>("rate") << std::endl;
             params::stack = pt.get<int>("stack") / rate;
@@ -150,12 +160,12 @@ int main(int argc, char* argv[]) {
                 pt.add("need_rate_resume", false);
             }
             else {
-                params::additional_ante *= rate;
                 rate = 1;
-                ante = pt.get<int>("ante");
-                params::stack = pt.get<int>("stack");
-                bets[0] = min(pt.get<int>("bet_0"), params::stack);
-                bets[1] = min(pt.get<int>("bet_1"), params::stack);
+//                params::additional_ante *= rate;
+//                ante = pt.get<int>("ante");
+//                params::stack = pt.get<int>("stack");
+                bets[0] = min(pt.get<int>("bet_0"), pt.get<int>("stack"));
+                bets[1] = min(pt.get<int>("bet_1"), pt.get<int>("stack"));
                 pt.add("need_rate_resume", true);
             }
 
@@ -163,7 +173,13 @@ int main(int argc, char* argv[]) {
 
             int adviced_action = continual_resolving.compute_action(node, pt);
 
-            auto action = adviced_action >= 0 ? std::to_string(adviced_action * rate) : std::to_string(adviced_action);
+            adviced_action = adviced_action >= 0 ? adviced_action * rate : adviced_action;
+
+            if ((pt.get<int>("street") == 1 && abs(adviced_action - pt.get<int>("stack")) <= 2 * rate) ||
+            abs(adviced_action - pt.get<int>("stack")) <= rate)
+                adviced_action = pt.get<int>("stack");
+
+            auto action = std::to_string(adviced_action);
 
             n = chrono::system_clock::now();
             m = n.time_since_epoch();
@@ -207,6 +223,7 @@ int main(int argc, char* argv[]) {
 
 
 //    int cards[5];
+
 //    int bets[2];
 //
 //    for (int i=0; i<5; ++i)

@@ -174,7 +174,7 @@ void NextRoundValue::init_var() {
     aux_next_round_serialized_range = aux_next_round_extended_range.view({-1, aux_bucket_count});
     aux_values_per_board = torch::zeros({batch_size * constants.players_count, hand_count}, torch::kFloat32).to(device);
     aux_value_normalization = torch::zeros({batch_size, constants.players_count}, torch::kFloat32).to(device);
-    aux_next_round_inputs.slice(1, aux_bucket_count * constants.players_count, max_size, 1).squeeze().copy_(pot_sizes.view(-1) / params::stack);
+    aux_next_round_inputs.slice(1, aux_bucket_count * constants.players_count, max_size, 1).squeeze(1).copy_(pot_sizes.view(-1) / params::stack);
 }
 
 void NextRoundValue::get_value_aux(torch::Tensor& ranges, torch::Tensor& values, const int next_board_idx) {
