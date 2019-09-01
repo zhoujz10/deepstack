@@ -59,6 +59,8 @@ void ContinualResolving::_resolve_node(Node &node, ptree &state) {
         params::stack = state.get<int>("stack");
         rate = 1;
         resolve_first_node();
+        node.bets[0] *= state.get<int>("rate");
+        node.bets[1] *= state.get<int>("rate");
         rate_resumed = true;
     }
 
@@ -71,7 +73,17 @@ void ContinualResolving::_resolve_node(Node &node, ptree &state) {
         assert (!node.terminal);
         assert (node.current_player == position);
 
+//        std::cout << "before update invariant" << std::endl;
+//        try {
+//            print(current_player_range.slice(0, 0, 20, 1));
+//        }
+//        catch (int e) {
+//
+//        }
+
         _update_invariant(node, state);
+//        std::cout << "after update invariant" << std::endl;
+//        print(current_player_range.slice(0, 0, 20, 1));
 
         if (resolving != first_node_resolving) {
             delete resolving;
@@ -84,8 +96,15 @@ void ContinualResolving::_resolve_node(Node &node, ptree &state) {
             current_opponent_cfvs_bound *= state.get<int>("rate");
         }
         resolving = new Resolving();
+//        print(current_player_range.slice(0, 0, 20, 1));
+//        print(current_opponent_cfvs_bound.slice(0, 0, 20, 1));
+//        print(opponent_range_warm_start.slice(0, 0, 20, 1));
         resolving->resolve(node, current_player_range, current_opponent_cfvs_bound, opponent_range_warm_start);
 //        opponent_range_warm_start.copy_(resolving->resolve_results["opponent_range_last_resolve"]);
+
+//        std::cout << "after resolve" << std::endl;
+//        print(current_player_range.slice(0, 0, 20, 1));
+//        print(current_opponent_cfvs_bound.slice(0, 0, 20, 1));
     }
 }
 
@@ -192,6 +211,8 @@ int ContinualResolving::_sample_bet(Node& node, ptree& state) {
 
     torch::Tensor strategy = torch::zeros(hand_count, torch::kFloat32).to(device);
     resolving->get_action_strategy(sampled_bet, strategy);
+//    std::cout << "strategy" << std::endl;
+//    print(strategy.slice(0, 0, 20, 1));
     current_player_range *= strategy;
     card_tools.normalize_range(node.board, current_player_range);
 
