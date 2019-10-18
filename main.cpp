@@ -24,6 +24,8 @@
 #include "Tree/poker_tree_builder.h"
 #include "Lookahead/resolving.h"
 #include "Player/continual_resolving.h"
+#include "DataGeneration/turn_generator.h"
+
 
 using namespace boost::property_tree;
 using HttpServer = SimpleWeb::Server<SimpleWeb::HTTP>;
@@ -55,6 +57,21 @@ private:
 };
 
 int main(int argc, char* argv[]) {
+
+//    generate_mode = true;
+//    RangeGenerator rg;
+//    char s[100];
+//    std::function<float()> _dice = std::bind(distribution, generator);
+//    auto filename_rand = (int)(10000000 * _dice());
+//    sprintf(s, "output_turn_cpp_700.bin.%d", filename_rand);
+//
+//    for (int i=0; i<100000; ++i) {
+//        if (i % 100 == 0)
+//            std::cout << i << std::endl;
+//        generate_turn_data(rg, s);
+//    }
+//
+//    return 0;
 
     HttpServer server;
     server.config.port = 8080;
@@ -88,11 +105,12 @@ int main(int argc, char* argv[]) {
 
 //    used to debug
 //    params::use_cache = 0;
-//    minimum_ante = 4;
-//    ante = 4;
-//    params::minimum_additional_ante = 2;
-//    params::additional_ante = 2;
-//    pokermaster = true;
+//    minimum_ante = 100;
+//    ante = 100;
+//    params::minimum_additional_ante = 0;
+//    params::additional_ante = 0;
+//    params::stack = 20000;
+//    pokermaster = false;
 
 
     if (pokermaster) {

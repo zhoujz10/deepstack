@@ -16,6 +16,8 @@ extern int minimum_ante;
 
 extern int rate;
 
+extern bool generate_mode;
+
 const bool gpu = false;
 
 const int streets_count = 4;

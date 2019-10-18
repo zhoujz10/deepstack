@@ -40,6 +40,7 @@ void TerminalEquity::_set_river_abstract(Board &b) {
     mask_next_street = mask_next_street.toType(torch::kByte);;
     mask_next_street *= -1;
     mask_next_street += 1;
+    mask_next_street = mask_next_street.toType(torch::kBool);
 }
 
 void TerminalEquity::_handle_blocking_cards() {

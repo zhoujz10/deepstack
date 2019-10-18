@@ -51,7 +51,7 @@ void get_possible_bets(Node& node, int street, int depth, bool is_next,
             street = 0;
             depth = 0;
         }
-        else if (is_next || depth >= 2) {
+        else if (is_next || depth >= 2 || generate_mode) {
             street = 0;
             depth = 0;
         }

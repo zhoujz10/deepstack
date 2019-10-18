@@ -61,6 +61,7 @@ public:
     void start_computation(torch::Tensor& src_pot_sizes);
     void get_value_aux(torch::Tensor& ranges, torch::Tensor& values, int next_board_idx=-1);
     void get_value(torch::Tensor& ranges, torch::Tensor& values);
+    void get_value_last_20(torch::Tensor& ranges, torch::Tensor& values);
     void get_value_on_board(Board& board, torch::Tensor& values);
 
     void init_var();
@@ -76,7 +77,9 @@ private:
     torch::Tensor _reverse_value_matrix;
 
     void _hand_range_to_bucket_range(torch::Tensor& hand_range, torch::Tensor& bucket_range);
+    void _hand_range_to_bucket_range_last_20(torch::Tensor& hand_range, torch::Tensor& bucket_range);
     void _bucket_value_to_hand_value(torch::Tensor& bucket_value, torch::Tensor& hand_value);
+    void _bucket_value_to_hand_value_last_20(torch::Tensor& bucket_value, torch::Tensor& hand_value);
     void _hand_range_to_bucket_range_on_board(int board_idx, torch::Tensor& hand_range, torch::Tensor& bucket_range);
     void _bucket_value_to_hand_value_on_board(Board& board, torch::Tensor& bucket_value, torch::Tensor& hand_value);
     void _hand_range_to_bucket_range_aux(const torch::Tensor& hand_range, torch::Tensor& bucket_range);

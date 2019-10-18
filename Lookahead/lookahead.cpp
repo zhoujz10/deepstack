@@ -41,7 +41,7 @@ void Lookahead::resolve(torch::Tensor& player_range, torch::Tensor& opponent_cfv
 }
 
 void Lookahead::_compute() {
-    std::cout << "start computing..." << std::endl;
+//    std::cout << "start computing..." << std::endl;
     for (int _iter=0; _iter<cfr_iters[tree->street]; ++_iter) {
         _set_opponent_starting_range(_iter);
         _compute_current_strategies();
@@ -107,6 +107,10 @@ void Lookahead::_compute_ranges() {
             auto i = std::get<4>(t);
 
             torch::Tensor rd_slice = ranges_data[layer][action_id][parent_id][gp_id];
+
+//            std::cout << layer << ' ' << action_id << ' ' << parent_id << ' ' << gp_id << ' ' << i << std::endl;
+//            std::cout << river_lookahead->ranges_convert.sizes() << std::endl;
+
             river_lookahead->ranges_convert[i].copy_(
                     torch::bmm(rd_slice.expand({boards_count[4], -1, -1}), terminal_equity.river_hand_abstract));
             river_lookahead->ranges_data_hand[i].copy_(rd_slice.expand_as(river_lookahead->ranges_data_hand[i]));
@@ -267,9 +271,13 @@ void Lookahead::_compute_terminal_equities_next_street_box(const int _iter) {
     }
 
     if (tree->street == 1) {
-        if (_iter >= cfr_skip_iters[1])
+//        std::cout << _iter << std::endl;
+        if (_iter >= cfr_skip_iters[1]) {
             next_street_boxes_inputs_memory[_iter - cfr_skip_iters[1]].copy_(next_street_boxes_inputs);
-        next_street_boxes->get_value_aux(next_street_boxes_inputs, next_street_boxes_outputs, next_board_idx);
+//            next_street_boxes->get_value_last_20(next_street_boxes_inputs, next_street_boxes_outputs);
+            next_street_boxes->get_value_aux(next_street_boxes_inputs, next_street_boxes_outputs, next_board_idx);
+        } else
+            next_street_boxes->get_value_aux(next_street_boxes_inputs, next_street_boxes_outputs, next_board_idx);
     }
     else
         next_street_boxes->get_value(next_street_boxes_inputs, next_street_boxes_outputs);

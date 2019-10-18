@@ -223,7 +223,7 @@ Node* PokerTreeBuilder::build_tree(Node& build_tree_node) {
     if (root->street == 3) {
         int cur_pot = *std::max_element(root->bets, root->bets+2);
         int river_pots_fractions[20];
-        if ((float)cur_pot / params::stack <= 0.03) {
+        if ((float)cur_pot / params::stack <= 0.03 && pokermaster) {
             if (root->bets[0] == root->bets[1] && root->current_player == constants.players.P1)
                 memcpy(river_pots_fractions, river_pots_fractions_05_s, 20 * sizeof(int));
             else

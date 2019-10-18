@@ -24,7 +24,7 @@ public:
         memset(p, 0, hand_count*hand_count*sizeof(float));
         read_pointer(p, hand_collide_file);
         hand_collide.copy_(torch::from_blob(p, {hand_count, hand_count}, torch::kFloat32));
-        delete[] p;
+//        delete[] p;
     }
 
     static void get_possible_hand_indexes(const Board& board, int *possible_hand_indexes) {

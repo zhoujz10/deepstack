@@ -12,6 +12,7 @@
 #include <torch/torch.h>
 
 static const c10::Device device = c10::Device(c10::DeviceType::CUDA);
+//static const c10::Device device = at::kCUDA;
 //static const c10::Device device = c10::Device(c10::DeviceType::CPU);
 
 static const char *hand_collide_file = "data/hand_collide.bin";
@@ -20,28 +21,39 @@ static const char *preflop_equity_matrix_file = "data/preflop_equity_matrix.bin"
 
 static const char *flop_equity_matrix_dir = "data/equity_matrix_flop/";
 
-static const char *board_buckets_file = "data/board_buckets.bin";
+//static const char *board_buckets_file = "data/board_buckets.bin";
+static const char *board_buckets_file = "data/board_buckets_partweight.bin";
 
-static const char *range_matrix_cache_root_file = "/data/range_matrix_cache/";
+static const char *range_matrix_cache_root_file = "/data/range_matrix_cache___/";
+
+static const char *range_matrix_cache_small_root_file = "/data/range_matrix_cache_small/";
 
 static const char *canonical_map_turn_file = "data/canonical_map_turn.bin";
 
-static const char *assignments_turn_file = "data/assignments_turn.bin";
+//static const char *assignments_turn_file = "data/assignments_turn.bin";
+static const char *assignments_turn_file = "data/assignments_turn_continue_00_2_partweight.bin";
 
-static const char *aux_net_file = "data/aux_net.pt";
-//static const char *aux_net_file = "data/aux_net_2.pt";
+//static const char *aux_net_file = "data/aux_net.pt";
+//static const char *aux_net_file = "data/aux_net_partweight_700.pt";
+//static const char *aux_net_file = "data/aux_model_weights_lua_mine.bin";
+static const char *aux_net_file = "data/aux_model_weights_700.bin";
 
-static const char *flop_net_file = "data/flop_net.pt";
-//static const char *flop_net_file = "data/flop_net_2.pt";
+//static const char *flop_net_file = "data/flop_net.pt";
+//static const char *flop_net_file = "data/flop_net_partweight_700.pt";
+//static const char *flop_net_file = "data/flop_model_weights_lua_mine.bin";
+static const char *flop_net_file = "data/flop_model_weights_700.bin";
 
-static const char *turn_net_file = "data/turn_net.pt";
-//static const char *turn_net_file = "data/turn_net_2.pt";
+//static const char *turn_net_file = "data/turn_net.pt";
+//static const char *turn_net_file = "data/turn_net_partweight_700.pt";
+//static const char *turn_net_file = "data/turn_model_weights_lua_mine.bin";
+static const char *turn_net_file = "data/turn_model_weights_700.bin";
 
 static const char *preflop_cache_root_file_slumbot = "/data/preflop_cache_slumbot_warmstart_new_network_cpp/";
 
 static const char *preflop_cache_root_file_pokermaster = "/data/preflop_cache_warmstart_new_network_cpp/";
 
-static const char *preflop_cache_root_file_pokermaster_addante = "/data/preflop_cache_warmstart_new_network_addante_cpp";
+//static const char *preflop_cache_root_file_pokermaster_addante = "/data/preflop_cache_warmstart_new_network_addante_cpp";
+static const char *preflop_cache_root_file_pokermaster_addante = "/data/preflop_cache_partweight_700_addante_cpp";
 
 extern std::string preflop_cache_root_file;
 
@@ -235,5 +247,8 @@ const char suit_table[4] = {'h', 's', 'c', 'd'};
 
 const char rank_table[13] = {'A', 'K', 'Q', 'J', 'T', '9', '8', '7', '6', '5', '4', '3', '2'};
 
+const int random_potsize_starts[5] = {100, 200, 400, 2000, 6000};
+
+const int random_potsize_numbers[5] = {2, 4, 32, 80, 280};
 
 #endif //DEEPSTACK_CPP_CONSTANTS_H
