@@ -58,6 +58,26 @@ private:
 
 int main(int argc, char* argv[]) {
 
+//    NextRoundValue& flop_value = get_flop_value();
+//    print(flop_value.board_buckets.slice(0, 100, 101, 1));
+//    return 0;
+
+//    torch::Tensor a = torch::ones({1, 2001}, torch::kFloat32).to(device) / 1000;
+//    torch::Tensor b = torch::zeros({1, 2000}, torch::kFloat32).to(device);
+//    auto flop_net = &get_flop_nn();
+//    flop_net->get_value(a, b);
+//    auto turn_net = &get_turn_nn();
+//    turn_net->get_value(a, b);
+
+
+//    torch::Tensor a = torch::ones({1, 169*2+1}, torch::kFloat32).to(device) / 169;
+//    torch::Tensor b = torch::zeros({1, 169*2}, torch::kFloat32).to(device);
+//    auto aux_net = &get_aux_nn();
+//    aux_net->get_value(a, b);
+//    print(b);
+//    return 0;
+
+
 //    generate_mode = true;
 //    RangeGenerator rg;
 //    char s[100];
