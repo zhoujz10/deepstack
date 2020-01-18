@@ -195,7 +195,7 @@ void ValueNn::get_value(torch::Tensor& inputs, torch::Tensor& outputs) {
     torch::Tensor tmp_slice = tmp.slice(0, 0, inputs.sizes()[0], 1);
     torch::Tensor m_slice = m.slice(0, 0, inputs.sizes()[0], 1);
 
-    m_slice.copy_(torch::matmul(inputs, w0)+b0);
+    m_slice.copy_(torch::matmul(inputs, w0) + b0);
     prelu_block(m_slice, alpha0, tmp_slice);
 
     m_slice.copy_(torch::matmul(tmp_slice, w1) + b1);

@@ -100,7 +100,7 @@ void ContinualResolving::_resolve_node(Node &node, ptree &state) {
 //        print(current_opponent_cfvs_bound.slice(0, 0, 20, 1));
 //        print(opponent_range_warm_start.slice(0, 0, 20, 1));
         resolving->resolve(node, current_player_range, current_opponent_cfvs_bound, opponent_range_warm_start);
-//        opponent_range_warm_start.copy_(resolving->resolve_results["opponent_range_last_resolve"]);
+        opponent_range_warm_start.copy_(resolving->resolve_results["opponent_range_last_resolve"]);
 
 //        std::cout << "after resolve" << std::endl;
 //        print(current_player_range.slice(0, 0, 20, 1));

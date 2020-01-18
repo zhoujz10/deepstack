@@ -492,8 +492,8 @@ void Lookahead::get_results(std::map<std::string, torch::Tensor> &out) {
 
     out["children_cfvs"] /= scaler;
 
-//    if (reconstruction_opponent_cfvs)
-//        out["opponent_range_last_resolve"] = average_opponent_range / (cfr_iters[tree->street] - cfr_skip_iters[tree->street]);
+    if (reconstruction_opponent_cfvs)
+        out["opponent_range_last_resolve"] = average_opponent_range / (cfr_iters[tree->street] - cfr_skip_iters[tree->street]);
 }
 
 void Lookahead::_set_opponent_starting_range(const int _iter) {
@@ -501,9 +501,8 @@ void Lookahead::_set_opponent_starting_range(const int _iter) {
         reconstruction_gadget->compute_opponent_range(cfvs_data[0][0][0][0][0], _iter);
         ranges_data[0].slice(3, 1, 2, 1).copy_(reconstruction_gadget->input_opponent_range);
 
-//        if (_iter >= cfr_skip_iters[tree->street]) {
-//            average_opponent_range += reconstruction_gadget->input_opponent_range / reconstruction_gadget->input_opponent_range.sum();
-//        }
+        if (_iter >= cfr_skip_iters[tree->street])
+            average_opponent_range += reconstruction_gadget->input_opponent_range / reconstruction_gadget->input_opponent_range.sum();
     }
 }
 
