@@ -87,6 +87,8 @@ void NextRoundValue::init_bucketing(Board *board_ptr) {
             _range_matrix_board_view = _range_matrix.view({hand_count, board_count, bucket_count});
             auto boards_ptr = new Board[board_count];
             CardTools::get_x_round_boards(*board_ptr, boards_ptr);
+
+            std::cout << "range matrix calculation starts." << std::endl;
             for (int idx=0; idx<board_count; ++idx) {
                 Board& board = boards_ptr[idx];
                 auto possible_hands = new int[hand_count];
@@ -105,8 +107,8 @@ void NextRoundValue::init_bucketing(Board *board_ptr) {
                         _range_matrix_board_view[h_idx][idx][assignments_turn[canonical_map_turn[all_state_id_4]]] = 1;
                     }
                 }
-
             }
+            std::cout << "range matrix calculation ends." << std::endl;
         }
         _reverse_value_matrix = _range_matrix.transpose(0, 1).clone();
         weight_constant = 1.0 / (board_count - 4);
