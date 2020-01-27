@@ -21,3 +21,5 @@ int minimum_ante = 100;
 int rate = 1;
 
 bool generate_mode = false;
+
+bool is_round_first_move = false;

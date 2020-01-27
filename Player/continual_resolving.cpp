@@ -66,6 +66,7 @@ void ContinualResolving::_resolve_node(Node &node, ptree &state) {
 
     if (decision_id == 0 && position == constants.players.P2) {
 //    the strategy computation for the first decision node has been already set up
+        is_round_first_move = true;
         current_player_range.copy_(starting_player_range);
         resolving = first_node_resolving;
     }
@@ -110,11 +111,13 @@ void ContinualResolving::_resolve_node(Node &node, ptree &state) {
 
 void ContinualResolving::_update_invariant(Node& node, ptree& state) {
     if (last_node != nullptr && last_node->street != node.street) {
+        is_round_first_move = true;
         assert (last_node->street + 1 == node.street);
         resolving->get_chance_action_cfv(last_bet, node.board, current_opponent_cfvs_bound);
         card_tools.normalize_range(node.board, current_player_range);
     }
     else if (decision_id == 0) {
+        is_round_first_move = true;
         assert (position == constants.players.P1);
         assert (node.street == 1);
 
@@ -122,6 +125,7 @@ void ContinualResolving::_update_invariant(Node& node, ptree& state) {
         current_opponent_cfvs_bound = starting_cfvs_p2.clone();
     }
     else {
+        is_round_first_move = false;
         assert (last_node->street == node.street);
     }
 }
@@ -347,6 +351,7 @@ int ContinualResolving::_sample_bet_from_cache() {
 
 void ContinualResolving::_resolve_node_cache(Node& node, ptree &state) {
     if (decision_id == 0 && position == constants.players.P2) {
+        is_round_first_move = true;
         current_player_range = starting_player_range.clone();
         resolving = first_node_resolving;
     }
@@ -367,6 +372,7 @@ void ContinualResolving::_resolve_node_cache(Node& node, ptree &state) {
 
 void ContinualResolving::_update_invariant_cache(Node& node) {
     if (last_node && last_node->street != node.street) {
+        is_round_first_move = true;
         assert (last_node->street + 1 == node.street);
         int board_idx = CardTools::get_board_index(node.board);
         auto next_street_boxes = get_flop_value();
@@ -386,8 +392,10 @@ void ContinualResolving::_update_invariant_cache(Node& node) {
         current_opponent_cfvs_bound *= pot_mult;
         card_tools.normalize_range(node.board, current_player_range);
     }
-    else
+    else {
+        is_round_first_move = false;
         assert (last_node->street == node.street);
+    }
 }
 
 void ContinualResolving::_generate_file_name(char *s) {

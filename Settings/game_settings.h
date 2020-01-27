@@ -18,6 +18,8 @@ extern int rate;
 
 extern bool generate_mode;
 
+extern bool is_round_first_move;
+
 const bool gpu = false;
 
 const int streets_count = 4;
