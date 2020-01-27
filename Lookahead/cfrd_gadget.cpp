@@ -14,20 +14,37 @@ CFRDGadget::CFRDGadget(Board& board, const torch::Tensor& opponent_cfvs, const t
 
 void CFRDGadget::compute_opponent_range(const torch::Tensor& current_opponent_cfvs, int iteration) {
 
+//    if (warm_start && is_round_first_move && (iteration == 0)) {
+//        torch::Tensor uniform_range = torch::ones({hand_count}, torch::kFloat32).to(device) * range_mask;
+//        uniform_range /= uniform_range.sum();
+//        opponent_range_warm_start /= opponent_range_warm_start.sum();
+//        input_opponent_range.copy_(opponent_range_warm_start * 0.9 + uniform_range * 0.1);
+//        input_opponent_range *= range_mask;
+//        return;
+//    }
+
+
     if (warm_start && is_round_first_move && (iteration == 0)) {
+
         torch::Tensor uniform_range = torch::ones({hand_count}, torch::kFloat32).to(device) * range_mask;
         uniform_range /= uniform_range.sum();
         opponent_range_warm_start /= opponent_range_warm_start.sum();
-        input_opponent_range.copy_(opponent_range_warm_start * 0.9 + uniform_range * 0.1);
-        input_opponent_range *= range_mask;
-        return;
+        opponent_range_warm_start.copy_(opponent_range_warm_start * 0.9 + uniform_range * 0.1);
+        opponent_range_warm_start *= range_mask;
+
     }
 
 
     torch::Tensor terminate_values = input_opponent_value;
 
-    total_values.copy_(current_opponent_cfvs * play_current_strategy);
-    total_values_p2.copy_(terminate_values * terminate_current_strategy);
+    if (warm_start && is_round_first_move) {
+        total_values.copy_(current_opponent_cfvs * play_current_strategy * opponent_range_warm_start);
+        total_values_p2.copy_(terminate_values * terminate_current_strategy * opponent_range_warm_start);
+    }
+    else {
+        total_values.copy_(current_opponent_cfvs * play_current_strategy);
+        total_values_p2.copy_(terminate_values * terminate_current_strategy);
+    }
     total_values += total_values_p2;
 
     play_current_regret.copy_(current_opponent_cfvs);
