@@ -34,6 +34,9 @@ public:
 
     CFRDGadget(Board& board, const torch::Tensor& opponent_cfvs, const torch::Tensor& src_opponent_range_warm_start);
     void compute_opponent_range(const torch::Tensor& current_opponent_cfvs, int iteration);
+
+
+    torch::Tensor cur_opponent_cfvs = torch::zeros({hand_count}, torch::kFloat32).to(device);
 };
 
 #endif //DEEPSTACK_CPP_CFRD_GADGET_H
