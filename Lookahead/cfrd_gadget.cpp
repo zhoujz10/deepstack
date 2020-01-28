@@ -32,28 +32,15 @@ void CFRDGadget::compute_opponent_range(const torch::Tensor& current_opponent_cf
         opponent_range_warm_start.copy_(opponent_range_warm_start * 0.9 + uniform_range * 0.1);
         opponent_range_warm_start *= range_mask;
 
-
-        input_opponent_value *= opponent_range_warm_start;
-
     }
-
 
     torch::Tensor terminate_values = input_opponent_value;
 
-    cur_opponent_cfvs.copy_(current_opponent_cfvs);
-
-    if (warm_start && is_round_first_move) {
-
-        cur_opponent_cfvs *= opponent_range_warm_start;
-    }
-
-//    total_values.copy_(current_opponent_cfvs * play_current_strategy);
-    total_values.copy_(cur_opponent_cfvs * play_current_strategy);
+    total_values.copy_(current_opponent_cfvs * play_current_strategy);
     total_values_p2.copy_(terminate_values * terminate_current_strategy);
     total_values += total_values_p2;
 
-//    play_current_regret.copy_(current_opponent_cfvs);
-    play_current_regret.copy_(cur_opponent_cfvs);
+    play_current_regret.copy_(current_opponent_cfvs);
     play_current_regret -= total_values;
 
     terminate_current_regret.copy_(terminate_values);
@@ -101,6 +88,10 @@ void CFRDGadget::compute_opponent_range(const torch::Tensor& current_opponent_cf
 
 
     input_opponent_range.copy_(play_current_strategy);
+
+    if (warm_start && is_round_first_move)
+        input_opponent_range *= opponent_range_warm_start;
+
 //    if (warm_start && is_round_first_move && (iteration == 0)) {
 //        torch::Tensor uniform_range = torch::ones({hand_count}, torch::kFloat32).to(device) * range_mask;
 //        uniform_range /= uniform_range.sum();
