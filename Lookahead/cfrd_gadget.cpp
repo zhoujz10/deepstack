@@ -89,7 +89,7 @@ void CFRDGadget::compute_opponent_range(const torch::Tensor& current_opponent_cf
 
     input_opponent_range.copy_(play_current_strategy);
 
-    if (warm_start && is_round_first_move)
+    if (warm_start && is_round_first_move && (iteration == 0))
         input_opponent_range *= opponent_range_warm_start;
 
 //    if (warm_start && is_round_first_move && (iteration == 0)) {
