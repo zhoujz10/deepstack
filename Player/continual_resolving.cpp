@@ -58,6 +58,8 @@ void ContinualResolving::_resolve_node(Node &node, ptree &state) {
         params::additional_ante *= state.get<int>("rate");
         params::stack = state.get<int>("stack");
         rate = 1;
+        delete first_node_resolving;
+        delete resolving;
         resolve_first_node();
         node.bets[0] *= state.get<int>("rate");
         node.bets[1] *= state.get<int>("rate");
@@ -96,6 +98,16 @@ void ContinualResolving::_resolve_node(Node &node, ptree &state) {
             rate_resumed = true;
             current_opponent_cfvs_bound *= state.get<int>("rate");
         }
+
+
+
+//        std::cout << "-------------------------------------" << std::endl;
+//        std::cout << current_player_range.slice(0, 500, 510, 1) << std::endl;
+//        std::cout << current_opponent_cfvs_bound.slice(0, 500, 510, 1) << std::endl;
+//        std::cout << "-------------------------------------" << std::endl;
+
+
+
         resolving = new Resolving();
 //        print(current_player_range.slice(0, 0, 20, 1));
 //        print(current_opponent_cfvs_bound.slice(0, 0, 20, 1));
@@ -145,8 +157,9 @@ int ContinualResolving::compute_action(Node& node, ptree& state) {
             bet_sequence.push_back(sampled_bet);
         }
         else {
-            if (prev_match && decision_id > 0) {
+            if (prev_match && (decision_id > 0)) {
                 std::cout << "--------prev match---------" << std::endl;
+//                std::cout << match << ' ' << prev_match << std::endl;
                 _resolve_node_cache(node, state);
             }
             else {
@@ -217,8 +230,37 @@ int ContinualResolving::_sample_bet(Node& node, ptree& state) {
     resolving->get_action_strategy(sampled_bet, strategy);
 //    std::cout << "strategy" << std::endl;
 //    print(strategy.slice(0, 0, 20, 1));
+
+
+
+
+//    std::cout << "+++++++++++++++++++++++++++++++++++++" << std::endl;
+//    std::cout << current_player_range.slice(0, 30, 50, 1) << std::endl;
+//    std::cout << "+++++++++++++++++++++++++++++++++++++" << std::endl;
+
+
     current_player_range *= strategy;
     card_tools.normalize_range(node.board, current_player_range);
+
+
+//    std::cout << "+++++++++++++++++++++++++++++++++++++" << std::endl;
+//    std::cout << strategy.slice(0, 30, 50, 1) << std::endl;
+
+
+
+//    std::cout << resolving->resolve_results["strategy"][0].slice(0, 0, 10, 1) << std::endl;
+//    std::cout << resolving->resolve_results["strategy"][1].slice(0, 0, 10, 1) << std::endl;
+//    std::cout << resolving->resolve_results["strategy"][2].slice(0, 0, 10, 1) << std::endl;
+
+
+//    std::cout << "+++++++++++++++++++++++++++++++++++++" << std::endl;
+
+
+
+//    std::cout << "*************************************" << std::endl;
+//    std::cout << current_player_range.slice(0, 0, 10, 1) << std::endl;
+//    std::cout << "*************************************" << std::endl;
+
 
     return sampled_bet;
 }
@@ -226,15 +268,17 @@ int ContinualResolving::_sample_bet(Node& node, ptree& state) {
 bool ContinualResolving::_load_preflop_cache(Node& node, ptree& state) {
     prev_match = match;
 //    std::cout << "aaa" << std::endl;
-    if (!match || state.get<bool>("need_rate_resume"))
+    if (!match || state.get<bool>("need_rate_resume")) {
+        match = false;
         return false;
+    }
 //    std::cout << "bbb" << std::endl;
     if (node.street > 1) {
         match = false;
         return false;
     }
 //    std::cout << "ccc" << params::stack << std::endl;
-    if (stack_match_list.find(params::stack) == stack_match_list.end()) {
+    if  (stack_match_list.find(params::stack) == stack_match_list.end()) {
         match = false;
         return false;
     }
@@ -343,8 +387,27 @@ int ContinualResolving::_sample_bet_from_cache() {
     std::cout << "playing action that has prob: " << hand_strategy[sampled_action_id_cache] << std::endl;
 
     current_opponent_cfvs_bound.copy_(children_cfvs_cache[sampled_action_id_cache]);
+
+
+//    std::cout << "+++++++++++++++++++++++++++++++++++++" << std::endl;
+//    std::cout << current_player_range.slice(0, 30, 50, 1) << std::endl;
+//    std::cout << "+++++++++++++++++++++++++++++++++++++" << std::endl;
+
+
     current_player_range *= strategy_cache[sampled_action_id_cache];
     card_tools.normalize_range(Board(), current_player_range);
+
+
+//    std::cout << "+++++++++++++++++++++++++++++++++++++" << std::endl;
+    std::cout << sampled_action_id_cache << std::endl;
+    std::cout << strategy_cache[sampled_action_id_cache].slice(0, 30, 50, 1) << std::endl;
+//    std::cout << "+++++++++++++++++++++++++++++++++++++" << std::endl;
+
+
+
+//    std::cout << "*************************************" << std::endl;
+//    std::cout << current_player_range.slice(0, 0, 10, 1) << std::endl;
+//    std::cout << "*************************************" << std::endl;
 
     return sampled_bet;
 }
@@ -365,6 +428,12 @@ void ContinualResolving::_resolve_node_cache(Node& node, ptree &state) {
             rate_resumed = true;
             current_opponent_cfvs_bound *= state.get<int>("rate");
         }
+
+//        std::cout << "-------------------------------------" << std::endl;
+//        std::cout << current_player_range.slice(0, 500, 510, 1) << std::endl;
+//        std::cout << current_opponent_cfvs_bound.slice(0, 500, 510, 1) << std::endl;
+//        std::cout << "-------------------------------------" << std::endl;
+
         resolving = new Resolving();
         resolving->resolve(node, current_player_range, current_opponent_cfvs_bound, opponent_range_warm_start);
     }
