@@ -235,7 +235,7 @@ const int boards_count[5] = { 0, 0, 22100, 49, 48 };
 
 extern bool pokermaster;
 
-const bool warm_start = true;
+const bool warm_start = false;
 
 const float pot_fractions_by_street[7][2][3] = {
     { {   1, -1,  -1 }, { 0.75,  1.25, -1 } },

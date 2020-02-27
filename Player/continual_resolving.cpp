@@ -245,6 +245,7 @@ int ContinualResolving::_sample_bet(Node& node, ptree& state) {
 
 //    std::cout << "+++++++++++++++++++++++++++++++++++++" << std::endl;
 //    std::cout << strategy.slice(0, 30, 50, 1) << std::endl;
+//    std::cout << "+++++++++++++++++++++++++++++++++++++" << std::endl;
 
 
 
@@ -399,8 +400,8 @@ int ContinualResolving::_sample_bet_from_cache() {
 
 
 //    std::cout << "+++++++++++++++++++++++++++++++++++++" << std::endl;
-    std::cout << sampled_action_id_cache << std::endl;
-    std::cout << strategy_cache[sampled_action_id_cache].slice(0, 30, 50, 1) << std::endl;
+//    std::cout << sampled_action_id_cache << std::endl;
+//    std::cout << strategy_cache[sampled_action_id_cache].slice(0, 30, 50, 1) << std::endl;
 //    std::cout << "+++++++++++++++++++++++++++++++++++++" << std::endl;
 
 
