@@ -32,8 +32,8 @@ void get_possible_bets(Node& node, int street, int depth, bool is_next,
     }
     else {
         int fraction_count = 0;
-        if (node.current_player == constants.players.P2 && (node.bets[0] == ante+params::additional_ante) &&
-        (node.bets[1] == ante / 2+params::additional_ante) && node.street == 1 && pokermaster && params::position == 1) {
+        if (node.current_player == constants.players.P2 && (node.bets[0] == ante + params::additional_ante) &&
+        (node.bets[1] == ante / 2 + params::additional_ante) && node.street == 1 && pokermaster && params::position == 1) {
             if (params::additional_ante == 0) {
                 street = 0;
                 depth = 1;
