@@ -25,7 +25,7 @@ void ContinualResolving::resolve_first_node() {
     card_tools.get_uniform_range(node.board, player_range);
     card_tools.get_uniform_range(node.board, opponent_range);
 
-    opponent_range_warm_start.copy_(opponent_range);
+    opponent_range_warm_start = opponent_range.clone();
     first_node_resolving = new Resolving();
 
     first_node_resolving->resolve_first_node(node, player_range, opponent_range);
