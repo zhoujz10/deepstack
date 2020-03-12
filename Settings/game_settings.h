@@ -24,9 +24,9 @@ const bool gpu = false;
 
 const int streets_count = 4;
 
-const int cfr_iters[5] = {-1, 800, 800, 800, 1600};
+const int cfr_iters[5] = {-1, 1000, 1000, 1000, 2000};
 
-const int cfr_skip_iters[5] = {-1, 780, 500, 500, 1000};
+const int cfr_skip_iters[5] = {-1, 980, 500, 500, 1000};
 
 const int suit_count = 4;
 

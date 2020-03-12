@@ -23,8 +23,8 @@ static const char *flop_equity_matrix_dir = "data/equity_matrix_flop/";
 
 //static const char *board_buckets_file = "data/board_buckets.bin";
 //static const char *board_buckets_file = "data/board_buckets_partweight.bin";
-//static const char *board_buckets_file = "data/board_buckets_histogram_kmpp.bin";
-static const char *board_buckets_file = "data/board_buckets_histogram_kmpp_histogram_kmpp.bin";
+static const char *board_buckets_file = "data/board_buckets_histogram_kmpp.bin";
+//static const char *board_buckets_file = "data/board_buckets_histogram_kmpp_histogram_kmpp.bin";
 
 static const char *range_matrix_cache_root_file = "/data/range_matrix_cache___/";
 
@@ -42,16 +42,16 @@ static const char *assignments_turn_file = "data/assignments_turn_histogram_kmpp
 //static const char *aux_net_file = "data/aux_model_weights_lua_mine.bin";
 //static const char *aux_net_file = "data/aux_model_weights_700.bin";
 //static const char *aux_net_file = "data/aux_model_weights_partweight_700_lua_mine.bin";
-static const char *aux_net_file = "data/aux_model_weights_histogram_kmpp_histogram_kmpp.bin";
-//static const char *aux_net_file = "data/aux_model_weights_histogram_kmpp.bin";
+//static const char *aux_net_file = "data/aux_model_weights_histogram_kmpp_histogram_kmpp.bin";
+static const char *aux_net_file = "data/aux_model_weights_histogram_kmpp.bin";
 
 //static const char *flop_net_file = "data/flop_net.pt";
 //static const char *flop_net_file = "data/flop_net_partweight_700.pt";
 //static const char *flop_net_file = "data/flop_model_weights_lua_mine.bin";
 //static const char *flop_net_file = "data/flop_model_weights_700.bin";
 //static const char *flop_net_file = "data/flop_model_weights_partweight_700_lua_mine.bin";
-static const char *flop_net_file = "data/flop_model_weights_histogram_kmpp_histogram_kmpp.bin";
-//static const char *flop_net_file = "data/flop_model_weights_histogram_kmpp.bin";
+//static const char *flop_net_file = "data/flop_model_weights_histogram_kmpp_histogram_kmpp.bin";
+static const char *flop_net_file = "data/flop_model_weights_histogram_kmpp.bin";
 
 //static const char *turn_net_file = "data/turn_net.pt";
 //static const char *turn_net_file = "data/turn_net_partweight_700.pt";
@@ -65,8 +65,8 @@ static const char *preflop_cache_root_file_pokermaster = "/data/preflop_cache_wa
 //static const char *preflop_cache_root_file_pokermaster_addante = "/data/preflop_cache_warmstart_new_network_addante_cpp";
 //static const char *preflop_cache_root_file_pokermaster_addante = "/data/preflop_cache_partweight_700_addante_cpp";
 //static const char *preflop_cache_root_file_pokermaster_addante = "/data/preflop_cache_partweight_700_lua_mine_addante_cpp";
-//static const char *preflop_cache_root_file_pokermaster_addante = "/data/preflop_cache_histogram_kmpp_addante_new2_cpp";
-static const char *preflop_cache_root_file_pokermaster_addante = "/data/preflop_cache_histogram_kmpp_addante_new3_less_cpp";
+static const char *preflop_cache_root_file_pokermaster_addante = "/data/preflop_cache_histogram_kmpp_addante_new2_cpp";
+//static const char *preflop_cache_root_file_pokermaster_addante = "/data/preflop_cache_histogram_kmpp_addante_new3_less_cpp";
 
 extern std::string preflop_cache_root_file;
 
